@@ -17,6 +17,7 @@ import { BitacoraPalet } from '@/components/BitacoraPalet'
 import { EditarPalet } from '@/components/EditarPalet'
 import { useVentanaDeCorreccion } from '@/hooks/useVentanaDeCorreccion'
 import { useOffline } from '@/hooks/useOffline'
+import { cx } from '@/lib/cx'
 import { ErrorSupabase } from '@/lib/queries/errores'
 import { RUTAS } from '@/rutas'
 import type { MovimientoConAutor } from '@/types'
@@ -36,9 +37,9 @@ interface PropsDato {
 
 function Dato({ etiqueta, children }: PropsDato) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-neutral-100 py-2 last:border-b-0">
-      <dt className="text-base text-neutral-500">{etiqueta}</dt>
-      <dd className="text-right text-base font-medium text-neutral-900">{children}</dd>
+    <div className="flex items-start justify-between gap-4 border-b border-piedra-100 py-2 last:border-b-0">
+      <dt className="text-base text-piedra-500">{etiqueta}</dt>
+      <dd className="text-right text-base font-medium text-piedra-900">{children}</dd>
     </div>
   )
 }
@@ -183,26 +184,32 @@ export function DetallePalet() {
         </div>
       )}
 
-      {/* --- Lo que se busca al escanear: cuánto queda --- */}
-      <Card className="text-center">
-        <p className="text-base text-neutral-500">Disponible</p>
-        <p
-          className={
-            sinStock
-              ? 'mt-1 text-6xl font-bold tracking-tight text-neutral-400'
-              : 'mt-1 text-6xl font-bold tracking-tight text-marca-800'
-          }
-        >
-          {palet.cantidad_disponible}
-        </p>
-        <p className="mt-1 text-lg text-neutral-600">{unidad}</p>
+      {/* --- Lo que se busca al escanear: cuánto queda ---
+          La cifra es lo único grande de la pantalla. Se lee de lejos, con el
+          palet delante y el teléfono en la mano. --- */}
+      <Card className="px-4 py-6 text-center">
+        <p className="rotulo">Disponible</p>
 
-        <p className="mt-2 text-sm text-neutral-500">
+        <p className="mt-2 flex items-baseline justify-center gap-2">
+          <span
+            className={cx(
+              'cifra text-6xl leading-none font-bold',
+              sinStock ? 'text-piedra-400' : 'text-marca-700',
+            )}
+          >
+            {palet.cantidad_disponible}
+          </span>
+          <span className="text-xl text-piedra-500">{unidad}</span>
+        </p>
+
+        <p className="cifra mt-3 text-sm text-piedra-500">
           de {palet.cantidad_inicial} {unidad} iniciales
         </p>
 
-        <div className="mt-3 flex items-center justify-center gap-2">
-          <span className="text-base font-medium text-neutral-700">Palet #{palet.id}</span>
+        <div className="mt-4 flex items-center justify-center gap-2 border-t border-piedra-100 pt-3">
+          <span className="cifra text-sm font-semibold text-piedra-700">
+            Palet #{palet.id}
+          </span>
           <EstadoPaletBadge estado={palet.estado} />
         </div>
       </Card>
@@ -301,7 +308,7 @@ export function DetallePalet() {
 
       {/* --- Historial --- */}
       <Card>
-        <h2 className="mb-2 text-lg font-semibold text-neutral-900">Movimientos</h2>
+        <h2 className="mb-2 text-lg font-semibold text-piedra-900">Movimientos</h2>
 
         {cargandoMovimientos ? (
           <div className="flex justify-center py-6 text-marca-700">

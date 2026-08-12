@@ -79,7 +79,7 @@ export function EscanearQR() {
         <ErrorMessage titulo={explicacion.titulo} mensaje={explicacion.texto} />
 
         {detalleTecnico !== null && (
-          <details className="text-sm text-neutral-500">
+          <details className="text-sm text-piedra-500">
             <summary className="cursor-pointer">Detalle técnico</summary>
             <p className="mt-1 font-mono text-xs break-all">{detalleTecnico}</p>
           </details>
@@ -104,14 +104,14 @@ export function EscanearQR() {
   return (
     <div className="flex flex-col gap-4">
       <Card className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-neutral-900">Escanear palet</h2>
-        <p className="text-base text-neutral-600">
+        <h2 className="text-lg font-semibold text-piedra-900">Escanear palet</h2>
+        <p className="text-base text-piedra-600">
           Apuntá la cámara al código QR pegado en el palet.
         </p>
 
         <Suspense
           fallback={
-            <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-neutral-900 text-white">
+            <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-piedra-900 text-white">
               <Spinner etiqueta="Preparando el lector" />
             </div>
           }

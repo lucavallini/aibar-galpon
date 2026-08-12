@@ -1,18 +1,23 @@
 import { useNavigate } from 'react-router'
-import { Card } from '@/components/ui/Card'
 import { useAuth } from '@/hooks/useAuth'
+import { Icono, type NombreIcono } from '@/components/ui/Icono'
+import { cx } from '@/lib/cx'
 import { RUTAS } from '@/rutas'
 
 /**
  * Inicio del operario.
  *
- * Dos accesos y nada más. Se usa con guantes y a veces con una mano ocupada, así
- * que los objetivos son grandes y están separados: equivocarse de botón acá
- * cuesta tiempo. Escanear va primero porque es lo que más se hace en el día.
+ * Se usa con guantes y a veces con una mano ocupada, así que los objetivos son
+ * grandes y están separados: equivocarse de botón acá cuesta tiempo.
+ *
+ * El orden es el del día de trabajo, no el del menú. Escanear es lo que más se
+ * hace, cargar un palet pasa cuando llega mercadería, y agregar producto o
+ * cliente son excepciones: por eso los últimos dos quedan abajo, agrupados y
+ * más contenidos.
  */
 
 interface PropsAcceso {
-  icono: string
+  icono: NombreIcono
   titulo: string
   descripcion: string
   onClick: () => void
@@ -21,25 +26,41 @@ interface PropsAcceso {
 
 function Acceso({ icono, titulo, descripcion, onClick, destacado = false }: PropsAcceso) {
   return (
-    <Card comoBoton onClick={onClick} className={destacado ? 'border-marca-200 bg-marca-50' : undefined}>
-      <div className="flex items-center gap-4 py-3">
-        <span className="text-4xl" aria-hidden="true">
-          {icono}
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        'flex w-full items-center gap-4 rounded-lg border p-4 text-left transition-colors',
+        destacado
+          ? 'border-marca-700 bg-marca-700 hover:bg-marca-800'
+          : 'border-piedra-200 bg-white hover:border-piedra-300 hover:bg-piedra-50',
+      )}
+    >
+      <span
+        className={cx(
+          'flex size-11 shrink-0 items-center justify-center rounded-md',
+          destacado ? 'bg-marca-800 text-marca-100' : 'bg-piedra-100 text-piedra-600',
+        )}
+      >
+        <Icono nombre={icono} tamaño={22} />
+      </span>
+
+      <span className="min-w-0">
+        <span
+          className={cx(
+            'block text-base font-semibold',
+            destacado ? 'text-white' : 'text-piedra-900',
+          )}
+        >
+          {titulo}
         </span>
-        <div className="min-w-0">
-          <p
-            className={
-              destacado
-                ? 'text-xl font-semibold text-marca-900'
-                : 'text-xl font-semibold text-neutral-900'
-            }
-          >
-            {titulo}
-          </p>
-          <p className="mt-0.5 text-base text-neutral-600">{descripcion}</p>
-        </div>
-      </div>
-    </Card>
+        <span
+          className={cx('block text-sm', destacado ? 'text-marca-100' : 'text-piedra-500')}
+        >
+          {descripcion}
+        </span>
+      </span>
+    </button>
   )
 }
 
@@ -48,46 +69,54 @@ export function InicioOperario() {
   const { perfil } = useAuth()
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       {perfil !== null && (
-        <p className="text-base text-neutral-600">Hola, {perfil.nombre}.</p>
+        <p className="text-lg text-piedra-700">
+          Hola, <span className="font-semibold text-piedra-900">{perfil.nombre}</span>.
+        </p>
       )}
 
-      <Acceso
-        destacado
-        icono="📷"
-        titulo="Escanear QR"
-        descripcion="Leé la etiqueta de un palet para ver su stock."
-        onClick={() => navegar(RUTAS.escanear)}
-      />
+      <div className="flex flex-col gap-3">
+        <Acceso
+          destacado
+          icono="escanear"
+          titulo="Escanear QR"
+          descripcion="Leé la etiqueta de un palet para ver su stock"
+          onClick={() => navegar(RUTAS.escanear)}
+        />
 
-      <Acceso
-        icono="🔎"
-        titulo="Buscar palet"
-        descripcion="Si la etiqueta no se puede escanear, buscalo por número o lote."
-        onClick={() => navegar(RUTAS.buscarPalets)}
-      />
+        <Acceso
+          icono="buscar"
+          titulo="Buscar palet"
+          descripcion="Si la etiqueta no se puede escanear, buscalo por número o lote"
+          onClick={() => navegar(RUTAS.buscarPalets)}
+        />
 
-      <Acceso
-        icono="📦"
-        titulo="Cargar palet nuevo"
-        descripcion="Dar de alta mercadería que acaba de llegar."
-        onClick={() => navegar(RUTAS.nuevoPalet)}
-      />
+        <Acceso
+          icono="palet"
+          titulo="Cargar palet nuevo"
+          descripcion="Dar de alta mercadería que acaba de llegar"
+          onClick={() => navegar(RUTAS.nuevoPalet)}
+        />
+      </div>
 
-      <Acceso
-        icono="🏢"
-        titulo="Agregar cliente"
-        descripcion="Empresas cuya mercadería se guarda en el depósito."
-        onClick={() => navegar(RUTAS.nuevoCliente)}
-      />
-
-      <Acceso
-        icono="🏷️"
-        titulo="Agregar producto"
-        descripcion="Sumar un producto que todavía no está en el sistema."
-        onClick={() => navegar(RUTAS.nuevoProducto)}
-      />
+      <div>
+        <p className="rotulo mb-2">Catálogo</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Acceso
+            icono="producto"
+            titulo="Agregar producto"
+            descripcion="Uno que todavía no esté cargado"
+            onClick={() => navegar(RUTAS.nuevoProducto)}
+          />
+          <Acceso
+            icono="cliente"
+            titulo="Agregar cliente"
+            descripcion="Empresas que guardan mercadería acá"
+            onClick={() => navegar(RUTAS.nuevoCliente)}
+          />
+        </div>
+      </div>
     </div>
   )
 }

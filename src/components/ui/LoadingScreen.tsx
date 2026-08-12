@@ -14,11 +14,11 @@ interface Props {
 export function LoadingScreen({ mensaje = 'Cargando…' }: Props) {
   return (
     <div
-      className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-neutral-50 text-marca-700"
+      className="flex h-full flex-col items-center justify-center gap-3 bg-piedra-100 text-marca-700"
       aria-live="polite"
     >
       <Spinner tamaño="lg" etiqueta={mensaje} />
-      <p className="text-base text-neutral-600">{mensaje}</p>
+      <p className="text-base text-piedra-600">{mensaje}</p>
     </div>
   )
 }

@@ -173,14 +173,14 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
       {/* ---------- Paso 1: qué y cuánto ---------- */}
       {paso === 'formulario' && (
         <Form onSubmit={(evento) => void handleSubmit(irAConfirmacion)(evento)}>
-          <p className="text-base text-neutral-600">
+          <p className="text-base text-piedra-600">
             Palet #{palet.id} · {palet.producto.nombre}
             <br />
             Disponible: <strong>{disponible} {unidad}</strong>
           </p>
 
           <fieldset>
-            <legend className="mb-2 text-base font-medium text-neutral-800">
+            <legend className="mb-2 text-base font-medium text-piedra-800">
               Tipo de movimiento
             </legend>
 
@@ -192,7 +192,7 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
                     'flex min-h-toque cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors',
                     'has-[:checked]:border-marca-600 has-[:checked]:bg-marca-50',
                     'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-marca-600',
-                    'border-neutral-300',
+                    'border-piedra-300',
                   )}
                 >
                   <input
@@ -202,10 +202,10 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
                     className="mt-1 size-5 accent-marca-700"
                   />
                   <span>
-                    <span className="block text-base font-medium text-neutral-900">
+                    <span className="block text-base font-medium text-piedra-900">
                       {tipo.etiqueta}
                     </span>
-                    <span className="block text-sm text-neutral-500">{tipo.ayuda}</span>
+                    <span className="block text-sm text-piedra-500">{tipo.ayuda}</span>
                   </span>
                 </label>
               ))}
@@ -266,12 +266,12 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
       {/* ---------- Paso 2: resumen antes de tocar el stock ---------- */}
       {paso === 'confirmacion' && (
         <div className="flex flex-col gap-4">
-          <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
-            <p className="text-base text-neutral-600">Vas a registrar</p>
-            <p className="mt-1 text-2xl font-bold text-neutral-900">
+          <div className="rounded-lg border border-piedra-200 bg-piedra-50 p-4">
+            <p className="text-base text-piedra-600">Vas a registrar</p>
+            <p className="mt-1 text-2xl font-bold text-piedra-900">
               {etiquetaTipo} de {cantidadNumerica} {unidad}
             </p>
-            <p className="mt-2 text-base text-neutral-600">
+            <p className="mt-2 text-base text-piedra-600">
               Palet #{palet.id} · {palet.producto.nombre}
               <br />
               Lote {palet.lote}
@@ -285,7 +285,7 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
             </span>
           </div>
 
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-piedra-500">
             Una vez registrado, solo se puede corregir dentro de los 30 minutos.
           </p>
 
@@ -317,7 +317,7 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
           </div>
 
           {restante === 0 && (
-            <p className="text-center text-base text-neutral-600">
+            <p className="text-center text-base text-piedra-600">
               El palet quedó vacío.
             </p>
           )}

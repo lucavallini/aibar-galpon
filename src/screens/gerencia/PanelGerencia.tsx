@@ -100,27 +100,44 @@ interface PropsAlerta {
 }
 
 function TarjetaDeAlerta({ titulo, cantidad, cargando, tono, activa, onClick }: PropsAlerta) {
-  const colores = {
-    peligro: 'border-red-300 bg-red-50 text-red-900',
-    advertencia: 'border-amber-300 bg-amber-50 text-amber-900',
-    neutral: 'border-neutral-200 bg-white text-neutral-900',
+  // Banda de color arriba en vez de fondo lleno: cuatro tarjetas con el fondo
+  // pintado compiten entre sí y ninguna resalta. La banda marca la urgencia sin
+  // robarle contraste a la cifra, que es el dato.
+  const banda = {
+    peligro: 'bg-red-600',
+    advertencia: 'bg-amber-500',
+    neutral: 'bg-piedra-300',
   } as const
 
+  const vacia = cantidad === 0 && !cargando
+
   return (
-    <Card
-      comoBoton
+    <button
+      type="button"
       onClick={onClick}
       className={cx(
-        colores[tono],
-        activa && 'ring-2 ring-marca-600 ring-offset-2',
-        cantidad === 0 && 'opacity-60',
+        'relative overflow-hidden rounded-lg border bg-white px-4 py-3 text-left transition-colors',
+        activa
+          ? 'border-piedra-800 ring-1 ring-piedra-800'
+          : 'border-piedra-200 hover:border-piedra-300 hover:bg-piedra-50',
       )}
     >
-      <p className="text-3xl font-bold">
+      <span
+        aria-hidden="true"
+        className={cx('absolute inset-x-0 top-0 h-1', vacia ? 'bg-piedra-200' : banda[tono])}
+      />
+
+      <span
+        className={cx(
+          'cifra block text-3xl leading-none font-bold',
+          vacia ? 'text-piedra-300' : 'text-piedra-900',
+        )}
+      >
         {cargando ? <Spinner tamaño="sm" decorativo /> : cantidad}
-      </p>
-      <p className="mt-1 text-sm font-medium">{titulo}</p>
-    </Card>
+      </span>
+
+      <span className="mt-1.5 block text-sm font-medium text-piedra-600">{titulo}</span>
+    </button>
   )
 }
 
@@ -136,15 +153,16 @@ function FilaPalet({ palet, onAbrir }: { palet: PaletGerencia; onAbrir: () => vo
     <Card comoBoton onClick={onAbrir}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-neutral-900">
-            #{palet.id} · {palet.producto_nombre}
+          <p className="truncate font-semibold text-piedra-900">
+            <span className="cifra text-piedra-500">#{palet.id}</span>{' '}
+            {palet.producto_nombre}
           </p>
-          <p className="mt-0.5 text-sm text-neutral-500">
+          <p className="mt-0.5 text-sm text-piedra-500">
             Lote {palet.lote} · Galpón {palet.galpon}
             {palet.sector !== null && ` · ${palet.sector}`}
           </p>
           {palet.cliente_nombre !== null && (
-            <p className="mt-0.5 truncate text-sm font-medium text-neutral-600">
+            <p className="mt-0.5 truncate text-sm font-medium text-piedra-600">
               Cliente: {palet.cliente_nombre}
             </p>
           )}
@@ -180,8 +198,10 @@ function FilaPalet({ palet, onAbrir }: { palet: PaletGerencia; onAbrir: () => vo
         </div>
 
         <div className="shrink-0 text-right">
-          <p className="text-2xl font-bold text-marca-800">{palet.cantidad_disponible}</p>
-          <p className="text-xs text-neutral-500">
+          <p className="cifra text-2xl leading-none font-bold text-piedra-900">
+            {palet.cantidad_disponible}
+          </p>
+          <p className="cifra mt-0.5 text-xs text-piedra-500">
             de {palet.cantidad_inicial} {palet.producto_unidad_medida}
           </p>
         </div>
@@ -226,7 +246,7 @@ export function PanelGerencia() {
     <div className="flex flex-col gap-5">
       {/* ---------- Encabezado con refresco ---------- */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-piedra-500">
           Actualizado a las {formatearHora(actualizado)}
         </p>
         <Button variante="secundario" cargando={isFetching} onClick={refrescar}>
@@ -236,9 +256,7 @@ export function PanelGerencia() {
 
       {/* ---------- Preguntas de negocio ---------- */}
       <section>
-        <h2 className="mb-2 text-sm font-bold tracking-wide text-neutral-500 uppercase">
-          Qué necesita atención
-        </h2>
+        <h2 className="rotulo mb-2">Qué necesita atención</h2>
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
           {alertas.map((alerta) => (
@@ -265,21 +283,21 @@ export function PanelGerencia() {
 
       {/* ---------- Stock consolidado ---------- */}
       <section>
-        <h2 className="mb-2 text-sm font-bold tracking-wide text-neutral-500 uppercase">
-          Stock por producto
-        </h2>
+        <h2 className="rotulo mb-2">Stock por producto</h2>
 
         <Card sinPadding>
-          <div className="flex flex-wrap gap-6 border-b border-neutral-100 p-4">
+          <div className="flex flex-wrap gap-6 border-b border-piedra-100 p-4">
             <div>
-              <p className="text-2xl font-bold text-neutral-900">{productosConStock}</p>
-              <p className="text-sm text-neutral-500">productos con stock</p>
+              <p className="cifra text-2xl leading-none font-bold text-piedra-900">
+                {productosConStock}
+              </p>
+              <p className="mt-1 text-sm text-piedra-500">productos con stock</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-neutral-900">
+              <p className="cifra text-2xl leading-none font-bold text-piedra-900">
                 {totalDisponible.toLocaleString('es-AR')}
               </p>
-              <p className="text-sm text-neutral-500">unidades en total</p>
+              <p className="mt-1 text-sm text-piedra-500">unidades en total</p>
             </div>
           </div>
 
@@ -290,13 +308,13 @@ export function PanelGerencia() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[34rem] text-left text-sm">
-                <thead className="border-b border-neutral-200 text-neutral-500">
+                <thead className="border-b border-piedra-200">
                   <tr>
-                    <th className="p-3 font-medium">Producto</th>
-                    <th className="p-3 text-right font-medium">Disponible</th>
-                    <th className="p-3 text-right font-medium">Palets</th>
-                    <th className="p-3 font-medium">Galpones</th>
-                    <th className="p-3 font-medium">Vence</th>
+                    <th className="rotulo p-3">Producto</th>
+                    <th className="rotulo p-3 text-right">Disponible</th>
+                    <th className="rotulo p-3 text-right">Palets</th>
+                    <th className="rotulo p-3">Galpones</th>
+                    <th className="rotulo p-3">Vence</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -305,34 +323,37 @@ export function PanelGerencia() {
                     .map((fila) => (
                       <tr
                         key={fila.producto_id}
-                        className="border-b border-neutral-100 last:border-b-0"
+                        className="border-b border-piedra-100 last:border-b-0"
                       >
                         <td className="p-3">
-                          <span className="font-medium text-neutral-900">
+                          <span className="font-medium text-piedra-900">
                             {fila.producto_nombre}
                           </span>
-                          <span className="ml-2 text-xs text-neutral-500">
+                          <span className="ml-2 text-xs text-piedra-500">
                             {fila.producto_categoria === 'agroquimico'
                               ? 'agroquímico'
                               : 'semilla'}
                           </span>
                         </td>
-                        <td className="p-3 text-right font-semibold text-neutral-900">
-                          {fila.total_disponible} {fila.producto_unidad_medida}
+                        <td className="cifra p-3 text-right font-semibold text-piedra-900">
+                          {fila.total_disponible}{' '}
+                          <span className="font-normal text-piedra-500">
+                            {fila.producto_unidad_medida}
+                          </span>
                         </td>
-                        <td className="p-3 text-right text-neutral-600">
+                        <td className="cifra p-3 text-right text-piedra-600">
                           {fila.palets_con_stock}
                           {fila.palets_parciales > 0 && (
-                            <span className="text-neutral-400">
+                            <span className="text-piedra-400">
                               {' '}
                               ({fila.palets_parciales} abiertos)
                             </span>
                           )}
                         </td>
-                        <td className="p-3 text-neutral-600">
+                        <td className="p-3 text-piedra-600">
                           {fila.galpones.length > 0 ? fila.galpones.join(', ') : '—'}
                         </td>
-                        <td className="p-3 text-neutral-600">
+                        <td className="p-3 text-piedra-600">
                           {formatearFecha(fila.proximo_vencimiento)}
                         </td>
                       </tr>
@@ -347,9 +368,7 @@ export function PanelGerencia() {
       {/* ---------- Listado con filtros ---------- */}
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-sm font-bold tracking-wide text-neutral-500 uppercase">
-            {PREGUNTAS[pregunta].titulo}
-          </h2>
+          <h2 className="rotulo">{PREGUNTAS[pregunta].titulo}</h2>
           {pregunta !== 'todo' && (
             <Button variante="fantasma" onClick={() => setPregunta('todo')}>
               Ver todo
@@ -357,13 +376,13 @@ export function PanelGerencia() {
           )}
         </div>
 
-        <p className="-mt-2 text-sm text-neutral-500">{PREGUNTAS[pregunta].explica}</p>
+        <p className="-mt-2 text-sm text-piedra-500">{PREGUNTAS[pregunta].explica}</p>
 
         <Card className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label
               htmlFor="filtro-lote"
-              className="mb-1 block text-sm font-medium text-neutral-700"
+              className="mb-1 block text-sm font-medium text-piedra-700"
             >
               Lote
             </label>
@@ -379,7 +398,7 @@ export function PanelGerencia() {
           <div>
             <label
               htmlFor="filtro-producto"
-              className="mb-1 block text-sm font-medium text-neutral-700"
+              className="mb-1 block text-sm font-medium text-piedra-700"
             >
               Producto
             </label>
@@ -402,7 +421,7 @@ export function PanelGerencia() {
           <div>
             <label
               htmlFor="filtro-cliente"
-              className="mb-1 block text-sm font-medium text-neutral-700"
+              className="mb-1 block text-sm font-medium text-piedra-700"
             >
               Cliente
             </label>
@@ -429,7 +448,7 @@ export function PanelGerencia() {
           <div>
             <label
               htmlFor="filtro-categoria"
-              className="mb-1 block text-sm font-medium text-neutral-700"
+              className="mb-1 block text-sm font-medium text-piedra-700"
             >
               Categoría
             </label>
@@ -451,7 +470,7 @@ export function PanelGerencia() {
           <div>
             <label
               htmlFor="filtro-estado"
-              className="mb-1 block text-sm font-medium text-neutral-700"
+              className="mb-1 block text-sm font-medium text-piedra-700"
             >
               Estado
             </label>
@@ -473,7 +492,7 @@ export function PanelGerencia() {
           </div>
 
           <div className="sm:col-span-2 lg:col-span-3">
-            <p className="mb-1 text-sm font-medium text-neutral-700">Galpón</p>
+            <p className="mb-1 text-sm font-medium text-piedra-700">Galpón</p>
             <div className="flex gap-2">
               <Button
                 variante={galpon === undefined ? 'primario' : 'secundario'}
@@ -517,7 +536,7 @@ export function PanelGerencia() {
           />
         ) : (
           <>
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-piedra-500">
               {palets.length} palet{palets.length === 1 ? '' : 's'}
             </p>
 

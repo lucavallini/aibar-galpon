@@ -20,13 +20,13 @@ export function Input({ invalido = false, className, ...resto }: Props) {
     <input
       aria-invalid={invalido || undefined}
       className={cx(
-        'block w-full min-h-toque rounded-lg border bg-white px-3 py-2.5 text-base text-neutral-900',
-        'placeholder:text-neutral-400',
+        'block w-full min-h-toque rounded-md border bg-white px-3 py-2.5 text-base text-piedra-900',
+        'placeholder:text-piedra-400',
         'focus:outline-none focus:ring-2',
         invalido
           ? 'border-red-500 focus:border-red-600 focus:ring-red-500/30'
-          : 'border-neutral-300 focus:border-marca-600 focus:ring-marca-600/30',
-        'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
+          : 'border-piedra-300 focus:border-marca-600 focus:ring-marca-600/30',
+        'disabled:cursor-not-allowed disabled:bg-piedra-100 disabled:text-piedra-500',
         className,
       )}
       {...resto}

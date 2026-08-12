@@ -116,7 +116,7 @@ export function EditarPalet({ palet, abierto, onCerrar }: Props) {
     >
       {modo === 'editar' && (
         <Form onSubmit={(evento) => void handleSubmit(guardar)(evento)}>
-          <p className="text-base text-neutral-600">
+          <p className="text-base text-piedra-600">
             Palet #{palet.id} · {productoDelPalet?.nombre ?? palet.producto.nombre}
           </p>
 
@@ -166,7 +166,7 @@ export function EditarPalet({ palet, abierto, onCerrar }: Props) {
             )}
           </Field>
 
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-piedra-500">
             La cantidad inicial no se puede cambiar. Si está mal, hay que dar de baja el
             palet y cargarlo de nuevo.
           </p>
@@ -212,7 +212,7 @@ export function EditarPalet({ palet, abierto, onCerrar }: Props) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="motivo-baja" className="text-base font-medium text-neutral-800">
+            <label htmlFor="motivo-baja" className="text-base font-medium text-piedra-800">
               Motivo de la baja <span className="text-red-700">*</span>
             </label>
             <textarea
@@ -223,9 +223,9 @@ export function EditarPalet({ palet, abierto, onCerrar }: Props) {
               maxLength={400}
               placeholder="Ej. Mercadería vencida, se descartó"
               disabled={trabajando}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-base text-neutral-900 placeholder:text-neutral-400 focus:border-marca-600 focus:ring-2 focus:ring-marca-600/30 focus:outline-none disabled:bg-neutral-100"
+              className="w-full rounded-lg border border-piedra-300 px-3 py-2.5 text-base text-piedra-900 placeholder:text-piedra-400 focus:border-marca-600 focus:ring-2 focus:ring-marca-600/30 focus:outline-none disabled:bg-piedra-100"
             />
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-piedra-500">
               Queda en la bitácora del palet, para que después se entienda por qué esa
               mercadería salió del stock.
             </p>

@@ -26,9 +26,9 @@ import { RUTAS } from '@/rutas'
 
 function Dato({ etiqueta, children }: { etiqueta: string; children: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-neutral-100 py-2 last:border-b-0">
-      <dt className="text-base text-neutral-500">{etiqueta}</dt>
-      <dd className="text-right text-base font-medium text-neutral-900">{children}</dd>
+    <div className="flex items-start justify-between gap-4 border-b border-piedra-100 py-2 last:border-b-0">
+      <dt className="text-base text-piedra-500">{etiqueta}</dt>
+      <dd className="text-right text-base font-medium text-piedra-900">{children}</dd>
     </div>
   )
 }
@@ -111,18 +111,24 @@ export function DetallePaletGerencia() {
         </div>
       )}
 
-      <Card className="text-center">
-        <p className="text-base text-neutral-500">Disponible</p>
-        <p className="mt-1 text-6xl font-bold tracking-tight text-marca-800">
-          {palet.cantidad_disponible}
+      <Card className="px-4 py-6 text-center">
+        <p className="rotulo">Disponible</p>
+
+        <p className="mt-2 flex items-baseline justify-center gap-2">
+          <span className="cifra text-6xl leading-none font-bold text-marca-700">
+            {palet.cantidad_disponible}
+          </span>
+          <span className="text-xl text-piedra-500">{unidad}</span>
         </p>
-        <p className="mt-1 text-lg text-neutral-600">{unidad}</p>
-        <p className="mt-2 text-sm text-neutral-500">
+
+        <p className="cifra mt-3 text-sm text-piedra-500">
           de {palet.cantidad_inicial} {unidad} · salieron {consumido}
         </p>
 
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-          <span className="text-base font-medium text-neutral-700">Palet #{palet.id}</span>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 border-t border-piedra-100 pt-3">
+          <span className="cifra text-sm font-semibold text-piedra-700">
+            Palet #{palet.id}
+          </span>
           <EstadoPaletBadge estado={palet.estado} />
           {palet.dias_sin_movimiento >= DIAS_INMOVILIZADO && (
             <Badge variante="neutral">Quieto {palet.dias_sin_movimiento} días</Badge>
@@ -152,7 +158,7 @@ export function DetallePaletGerencia() {
               <Dato etiqueta="Vencimiento">
                 {formatearFecha(palet.fecha_vencimiento)}
                 {palet.dias_para_vencer !== null && !vencido && (
-                  <span className="ml-2 text-sm font-normal text-neutral-500">
+                  <span className="ml-2 text-sm font-normal text-piedra-500">
                     (en {palet.dias_para_vencer} días)
                   </span>
                 )}
@@ -185,7 +191,7 @@ export function DetallePaletGerencia() {
       <BitacoraPalet paletId={palet.id} soloLectura />
 
       <Card>
-        <h2 className="mb-2 text-lg font-semibold text-neutral-900">
+        <h2 className="mb-2 text-lg font-semibold text-piedra-900">
           Historial de movimientos
         </h2>
 

@@ -70,8 +70,8 @@ export function BitacoraPalet({ paletId, soloLectura = false }: Props) {
 
   return (
     <Card>
-      <h2 className="mb-1 text-lg font-semibold text-neutral-900">Observaciones</h2>
-      <p className="mb-3 text-sm text-neutral-500">
+      <h2 className="mb-1 text-lg font-semibold text-piedra-900">Observaciones</h2>
+      <p className="mb-3 text-sm text-piedra-500">
         Anotá lo que le pase al palet: envases rotos, faltantes, humedad.
       </p>
 
@@ -88,11 +88,11 @@ export function BitacoraPalet({ paletId, soloLectura = false }: Props) {
             rows={3}
             placeholder="Ej. 2 bidones pinchados en la fila de arriba"
             disabled={crear.isPending}
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-base text-neutral-900 placeholder:text-neutral-400 focus:border-marca-600 focus:ring-2 focus:ring-marca-600/30 focus:outline-none disabled:bg-neutral-100"
+            className="w-full rounded-lg border border-piedra-300 px-3 py-2.5 text-base text-piedra-900 placeholder:text-piedra-400 focus:border-marca-600 focus:ring-2 focus:ring-marca-600/30 focus:outline-none disabled:bg-piedra-100"
           />
 
           <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-neutral-400">
+            <span className="text-sm text-piedra-400">
               {texto.length}/{MAXIMO}
             </span>
             <Button cargando={crear.isPending} disabled={!puedeGuardar} onClick={() => void guardar()}>
@@ -116,7 +116,7 @@ export function BitacoraPalet({ paletId, soloLectura = false }: Props) {
       ) : isError ? (
         <ErrorMessage mensaje={error.message} onReintentar={() => void refetch()} />
       ) : observaciones.length === 0 ? (
-        <p className="py-2 text-base text-neutral-500">
+        <p className="py-2 text-base text-piedra-500">
           Sin observaciones. Este palet no tuvo novedades.
         </p>
       ) : (
@@ -127,12 +127,12 @@ export function BitacoraPalet({ paletId, soloLectura = false }: Props) {
             return (
               <li
                 key={observacion.id}
-                className="border-b border-neutral-100 py-3 last:border-b-0"
+                className="border-b border-piedra-100 py-3 last:border-b-0"
               >
-                <p className="text-base whitespace-pre-line text-neutral-900">
+                <p className="text-base whitespace-pre-line text-piedra-900">
                   {observacion.texto}
                 </p>
-                <p className="mt-1 text-sm text-neutral-500">
+                <p className="mt-1 text-sm text-piedra-500">
                   {formatearFechaHora(observacion.created_at)}
                   {' · '}
                   {esPropia ? 'Vos' : (observacion.usuario?.nombre ?? 'Usuario no disponible')}

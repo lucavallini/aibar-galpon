@@ -68,16 +68,16 @@ export function Login() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col justify-center bg-neutral-50 px-4 py-12">
+    <main className="flex h-full flex-col justify-center overflow-y-auto bg-piedra-100 px-4 py-12">
       <div className="mx-auto w-full max-w-sm">
         <header className="mb-8 text-center">
           <h1 className="text-3xl font-bold tracking-tight text-marca-800">AIBAR</h1>
-          <p className="mt-1 text-base text-neutral-600">Trazabilidad de palets</p>
+          <p className="mt-1 text-base text-piedra-600">Trazabilidad de palets</p>
         </header>
 
         <Form
           onSubmit={manejarEnvio}
-          className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm"
+          className="rounded-xl border border-piedra-200 bg-white p-6 shadow-sm"
         >
           <Field label="Email" requerido>
             {(props) => (
@@ -117,7 +117,7 @@ export function Login() {
           </Button>
         </Form>
 
-        <p className="mt-6 text-center text-sm text-neutral-500">
+        <p className="mt-6 text-center text-sm text-piedra-500">
           ¿No tenés cuenta o no podés entrar? Hablá con el encargado del depósito.
         </p>
       </div>

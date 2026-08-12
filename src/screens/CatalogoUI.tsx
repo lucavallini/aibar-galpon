@@ -11,6 +11,7 @@ import { Field } from '@/components/ui/Field'
 import { Form, FormAcciones } from '@/components/ui/Form'
 import { EstadoPaletBadge } from '@/components/EstadoPaletBadge'
 import { PruebaImpresion } from '@/components/PruebaImpresion'
+import { Icono, type NombreIcono } from '@/components/ui/Icono'
 import type { EstadoPalet } from '@/types'
 
 /**
@@ -29,9 +30,7 @@ interface PropsSeccion {
 function Seccion({ titulo, children }: PropsSeccion) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="border-b border-neutral-200 pb-1 text-sm font-bold tracking-wide text-neutral-500 uppercase">
-        {titulo}
-      </h2>
+      <h2 className="rotulo border-b border-piedra-200 pb-1">{titulo}</h2>
       {children}
     </section>
   )
@@ -39,15 +38,28 @@ function Seccion({ titulo, children }: PropsSeccion) {
 
 const ESTADOS: EstadoPalet[] = ['activo', 'parcial', 'vacio', 'baja']
 
+const ICONOS: NombreIcono[] = [
+  'inicio',
+  'escanear',
+  'buscar',
+  'palet',
+  'producto',
+  'cliente',
+  'panel',
+  'usuarios',
+  'pendientes',
+  'salir',
+]
+
 export function CatalogoUI() {
   const [texto, setTexto] = useState('')
   const [conError, setConError] = useState(false)
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-8 bg-neutral-50 p-4">
+    <main className="mx-auto flex h-full max-w-3xl flex-col gap-8 overflow-y-auto bg-piedra-100 p-4">
       <header>
         <h1 className="text-2xl font-bold text-marca-800">Catálogo de componentes</h1>
-        <p className="text-base text-neutral-600">
+        <p className="text-base text-piedra-600">
           Solo visible en desarrollo. Todos los controles miden 44&nbsp;px de alto como
           mínimo.
         </p>
@@ -55,6 +67,28 @@ export function CatalogoUI() {
 
       <Seccion titulo="Impresión de etiquetas">
         <PruebaImpresion />
+      </Seccion>
+
+      <Seccion titulo="Iconos">
+        <div className="flex flex-wrap gap-4 text-piedra-700">
+          {ICONOS.map((nombre) => (
+            <div key={nombre} className="flex w-16 flex-col items-center gap-1">
+              <Icono nombre={nombre} tamaño={24} />
+              <span className="text-[0.625rem] text-piedra-500">{nombre}</span>
+            </div>
+          ))}
+        </div>
+      </Seccion>
+
+      <Seccion titulo="Cifras">
+        <div className="flex flex-wrap items-baseline gap-6">
+          <p className="cifra text-5xl font-bold text-marca-700">1.240</p>
+          <p className="cifra text-3xl font-bold text-piedra-900">88</p>
+          <p className="cifra text-xl font-semibold text-piedra-700">#152</p>
+        </div>
+        <p className="text-sm text-piedra-500">
+          Números tabulares: en una columna de cantidades quedan alineados por la coma.
+        </p>
       </Seccion>
 
       <Seccion titulo="Botones">
@@ -145,12 +179,12 @@ export function CatalogoUI() {
 
       <Seccion titulo="Tarjetas">
         <Card>
-          <p className="text-base text-neutral-700">Tarjeta estática.</p>
+          <p className="text-base text-piedra-700">Tarjeta estática.</p>
         </Card>
 
         <Card comoBoton onClick={() => undefined}>
-          <p className="text-base font-medium text-neutral-900">Tarjeta clickeable</p>
-          <p className="text-sm text-neutral-500">
+          <p className="text-base font-medium text-piedra-900">Tarjeta clickeable</p>
+          <p className="text-sm text-piedra-500">
             Se enfoca con el teclado porque es un &lt;button&gt; de verdad.
           </p>
         </Card>

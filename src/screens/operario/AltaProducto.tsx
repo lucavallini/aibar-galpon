@@ -136,8 +136,8 @@ export function AltaProducto() {
 
   return (
     <Card>
-      <h2 className="mb-1 text-xl font-semibold text-neutral-900">Nuevo producto</h2>
-      <p className="mb-5 text-base text-neutral-600">
+      <h2 className="mb-1 text-xl font-semibold text-piedra-900">Nuevo producto</h2>
+      <p className="mb-5 text-base text-piedra-600">
         Cargá el producto una sola vez. Después vas a poder crear todos los palets que
         quieras de él.
       </p>

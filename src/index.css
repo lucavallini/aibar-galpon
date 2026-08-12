@@ -1,55 +1,130 @@
 @import 'tailwindcss';
 
 /**
- * Tokens de diseño de AIBAR.
+ * Sistema visual de AIBAR.
  *
- * La app se usa en el depósito, desde el celular, muchas veces con guantes o las
- * manos sucias. Todo lo que sigue prioriza que se pueda tocar y leer en esas
- * condiciones antes que la densidad de información.
+ * La referencia no es un panel de software: es la señalética de un depósito y
+ * la etiqueta de un bidón. Cifras grandes que se leen a tres metros, rótulos en
+ * versalitas, color que significa algo y nada que decore por decorar.
+ *
+ * Se opera con guantes, con poca luz y a veces con una mano ocupada.
  */
 @theme {
   /* ---------------------------------------------------------------
    * Marca
-   * --------------------------------------------------------------- */
-  --color-marca-50: #f0fdf4;
-  --color-marca-100: #dcfce7;
-  --color-marca-200: #bbf7d0;
-  --color-marca-600: #16a34a;
-  --color-marca-700: #15803d; /* Color principal. Contraste 4.9:1 sobre blanco (AA). */
-  --color-marca-800: #166534;
-  --color-marca-900: #14532d;
+   * ---------------------------------------------------------------
+   * Verde profundo, desaturado hacia el oliva. El verde brillante es
+   * el reflejo automático de cualquier app del agro; este es el de
+   * un bidón de herbicida y aguanta mejor el texto blanco encima.
+   */
+  --color-marca-50: #f2f6f0;
+  --color-marca-100: #e0eadc;
+  --color-marca-200: #c2d5ba;
+  --color-marca-300: #9bb98e;
+  --color-marca-600: #4a6b3d;
+  --color-marca-700: #3b5730; /* Principal. 7.4:1 sobre blanco. */
+  --color-marca-800: #2d4325;
+  --color-marca-900: #1f2f19;
+  --color-marca-950: #131d0f;
 
   /* ---------------------------------------------------------------
-   * Estados de palet
+   * Neutros
    * ---------------------------------------------------------------
-   * No hay tokens propios: los cuatro estados se pintan con las
-   * variantes semánticas de `Badge` (exito / advertencia / neutral /
-   * peligro), y el mapeo vive en `EstadoPaletBadge`. Agregar tokens
-   * aparte sería un segundo vocabulario para lo mismo.
+   * Con una pizca de amarillo: el gris azulado de dashboard se ve
+   * frío y clínico al lado de cartón, madera y chapa.
    */
+  --color-piedra-50: #faf9f7;
+  --color-piedra-100: #f2f1ed;
+  --color-piedra-200: #e6e4de;
+  --color-piedra-300: #d3d0c7;
+  --color-piedra-400: #a8a49a;
+  --color-piedra-500: #7d7970;
+  --color-piedra-600: #5c5952;
+  --color-piedra-700: #45423d;
+  --color-piedra-800: #2e2c29;
+  --color-piedra-900: #1c1b19;
 
   /* ---------------------------------------------------------------
    * Target táctil
    * ---------------------------------------------------------------
-   * 44px es el mínimo recomendado para tocar con el dedo, y acá se
-   * usa con guantes. Botones, inputs, selects e ítems de navegación
-   * nunca bajan de esta altura: si en la práctica resulta chico, se
-   * sube este único valor.
+   * 44px es el mínimo para tocar con el dedo, y acá se usa con
+   * guantes. Si en la práctica resulta chico, se sube este valor.
    */
   --spacing-toque: 2.75rem; /* 44px */
-  --spacing-toque-holgado: 3.25rem; /* 52px, para las acciones principales */
+  --spacing-toque-holgado: 3.25rem; /* 52px */
+
+  /* Ancho de la barra lateral en escritorio. */
+  --spacing-lateral: 15rem;
 }
 
 /**
- * El scroll del contenido lo maneja el layout, no el documento: si no, en el
- * celular la barra de navegación fija al pie se despega al hacer scroll.
+ * ALTURA Y SCROLL
+ *
+ * La app ocupa exactamente el alto de la ventana y el scroll vive adentro del
+ * contenido, no en el documento: así la barra de navegación inferior queda
+ * quieta en el celular en vez de irse hacia arriba al desplazarse.
+ *
+ * Los tres niveles tienen que declararse. `#root` es el que faltaba: sin él, el
+ * layout medía `100dvh` mientras el body medía `100%` del viewport inicial, y
+ * en el celular esos dos valores se separan cuando aparece o desaparece la
+ * barra de direcciones. Esa diferencia es la que hacía scrollear el documento.
  */
 html,
-body {
+body,
+#root {
   height: 100%;
 }
 
-/* Nadie debería ver el foco desplazado por un scroll horizontal accidental. */
 body {
+  /* Nada debe desbordar a lo ancho: las tablas anchas llevan su propio
+     contenedor con scroll horizontal. */
   overflow-x: hidden;
+  background-color: var(--color-piedra-100);
+  color: var(--color-piedra-800);
+  -webkit-font-smoothing: antialiased;
+}
+
+/**
+ * TIPOGRAFÍA DE DATOS
+ *
+ * Las cifras son el contenido principal de esta app: cuánto queda, qué palet
+ * es, cuántos días faltan para que venza. `tabular-nums` les da a todos los
+ * dígitos el mismo ancho, así una columna de cantidades queda alineada por la
+ * coma y se puede comparar de un vistazo en lugar de leerla número por número.
+ */
+.cifra {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  letter-spacing: -0.02em;
+}
+
+/**
+ * RÓTULOS
+ *
+ * Versalitas con tracking abierto, como la señalética de un galpón. Marcan la
+ * estructura sin agregar una línea ni un color más.
+ */
+.rotulo {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-piedra-500);
+}
+
+/* El foco tiene que verse siempre: se navega con teclado y con guantes. */
+:focus-visible {
+  outline: 2px solid var(--color-marca-600);
+  outline-offset: 2px;
+}
+
+/* Quien pidió menos movimiento, no lo tiene. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

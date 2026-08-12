@@ -85,7 +85,7 @@ export function HistorialMovimientos({
           <li
             key={movimiento.id}
             className={cx(
-              'border-b border-neutral-100 py-3 last:border-b-0',
+              'border-b border-piedra-100 py-3 last:border-b-0',
               // La corrección se despega visualmente: es la única que suma.
               esCorreccion && '-mx-2 rounded-lg border-b-0 bg-marca-50 px-2',
             )}
@@ -95,10 +95,10 @@ export function HistorialMovimientos({
               <span
                 className={cx(
                   'text-base font-semibold',
-                  esCorreccion ? 'text-marca-900' : 'text-neutral-900',
+                  esCorreccion ? 'text-marca-900' : 'text-piedra-900',
                   // Tachado: el movimiento sigue en el historial pero su efecto
                   // sobre el stock ya fue revertido.
-                  fueCorregido && 'text-neutral-400 line-through',
+                  fueCorregido && 'text-piedra-400 line-through',
                 )}
               >
                 {presentacion.signo}
@@ -106,11 +106,11 @@ export function HistorialMovimientos({
               </span>
 
               {fueCorregido && (
-                <span className="text-sm font-medium text-neutral-500">deshecho</span>
+                <span className="text-sm font-medium text-piedra-500">deshecho</span>
               )}
             </div>
 
-            <p className="mt-1 text-sm text-neutral-500">
+            <p className="mt-1 text-sm text-piedra-500">
               {formatearFechaHora(movimiento.fecha_hora)}
               {' · '}
               {/* Sin nombre solo si RLS lo filtró: la fila del movimiento
@@ -125,7 +125,7 @@ export function HistorialMovimientos({
             )}
 
             {movimiento.motivo !== null && (
-              <p className="mt-1 text-sm text-neutral-600 italic">«{movimiento.motivo}»</p>
+              <p className="mt-1 text-sm text-piedra-600 italic">«{movimiento.motivo}»</p>
             )}
 
             {sePuedeCorregir && (

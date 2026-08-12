@@ -1,12 +1,12 @@
-import type { ReactNode } from 'react'
 import { NavLink } from 'react-router'
+import { Icono, type NombreIcono } from '@/components/ui/Icono'
 import { cx } from '@/lib/cx'
 
 export interface ItemNav {
   /** Ruta destino. Tiene que existir en `src/rutas.tsx`. */
   a: string
   etiqueta: string
-  icono: ReactNode
+  icono: NombreIcono
 }
 
 interface Props {
@@ -18,54 +18,105 @@ interface Props {
 /**
  * Navegación principal.
  *
- * Se renderiza dos veces con distinta disposición —al pie en el celular y al
- * costado en el escritorio— en lugar de una sola que cambie de forma con CSS.
- * Duplicar el marcado permite que cada una tenga la estructura que le sirve; la
- * copia oculta se marca con `aria-hidden` en `Layout` para que el lector de
- * pantalla no anuncie los destinos dos veces.
+ * Se renderiza dos veces con distinta disposición —al pie en el celular, al
+ * costado en el escritorio— porque son dos estructuras distintas, no la misma
+ * doblada con CSS. Solo una está montada a la vez: `Layout` alterna con
+ * `hidden`/`md:hidden`, así el lector de pantalla no anuncia los destinos dos
+ * veces.
  */
 export function Nav({ items, disposicion }: Props) {
-  if (items.length === 0) {
-    return null
-  }
+  if (items.length === 0) return null
 
-  const esPie = disposicion === 'pie'
+  return disposicion === 'pie' ? <NavPie items={items} /> : <NavLateral items={items} />
+}
 
+/**
+ * Celular: barra fija al pie, donde llega el pulgar.
+ *
+ * No lleva `sticky` ni `fixed`: es hermana del contenedor con scroll dentro de
+ * un flex de alto completo, así que queda quieta por estructura. Un `fixed` acá
+ * volvería a taparle el final del contenido.
+ */
+function NavPie({ items }: { items: ItemNav[] }) {
   return (
     <nav
       aria-label="Navegación principal"
-      className={cx(
-        esPie
-          ? // Fija al pie, con el margen de la barra gestual del teléfono.
-            'sticky bottom-0 z-10 border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)]'
-          : 'w-56 shrink-0 border-r border-neutral-200 bg-white p-3',
-      )}
+      className="shrink-0 border-t border-piedra-200 bg-white pb-[env(safe-area-inset-bottom)]"
     >
-      <ul className={cx(esPie ? 'flex' : 'flex flex-col gap-1')}>
+      <ul className="flex">
         {items.map((item) => (
-          <li key={item.a} className={cx(esPie && 'flex-1')}>
+          <li key={item.a} className="flex-1">
             <NavLink
               to={item.a}
               end
               className={({ isActive }) =>
                 cx(
-                  'flex items-center gap-2 font-medium transition-colors',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-marca-600',
-                  esPie
-                    ? 'min-h-toque-holgado flex-col justify-center gap-1 px-1 py-2 text-xs'
-                    : 'min-h-toque rounded-lg px-3 py-2 text-base',
-                  isActive
-                    ? esPie
-                      ? 'text-marca-700'
-                      : 'bg-marca-50 text-marca-800'
-                    : 'text-neutral-600 hover:text-neutral-900',
+                  'relative flex min-h-toque-holgado flex-col items-center justify-center gap-1 px-1 py-2',
+                  'text-[0.6875rem] font-medium transition-colors',
+                  isActive ? 'text-marca-700' : 'text-piedra-500 active:text-piedra-800',
                 )
               }
             >
-              <span aria-hidden="true" className="shrink-0">
-                {item.icono}
-              </span>
-              <span className={cx(esPie && 'leading-none')}>{item.etiqueta}</span>
+              {({ isActive }) => (
+                <>
+                  {/* Marca de posición arriba del ícono: en el pie, un fondo
+                      lleno compite con el contenido de la pantalla. */}
+                  <span
+                    aria-hidden="true"
+                    className={cx(
+                      'absolute inset-x-3 top-0 h-0.5 rounded-full transition-colors',
+                      isActive ? 'bg-marca-700' : 'bg-transparent',
+                    )}
+                  />
+                  <Icono nombre={item.icono} tamaño={22} />
+                  <span className="leading-none">{item.etiqueta}</span>
+                </>
+              )}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
+
+/**
+ * Escritorio: columna oscura a la izquierda.
+ *
+ * Oscura a propósito. Una barra lateral blanca sobre fondo claro no separa
+ * nada: se lee como una lista suelta flotando al costado. El bloque oscuro
+ * ancla la pantalla, deja el contenido claro como la única superficie de
+ * trabajo, y hace que el destino activo se distinga sin necesidad de más
+ * adornos.
+ */
+function NavLateral({ items }: { items: ItemNav[] }) {
+  return (
+    <nav
+      aria-label="Navegación principal"
+      className="flex h-full w-lateral shrink-0 flex-col bg-marca-950"
+    >
+      <div className="px-5 py-5">
+        <p className="text-lg font-bold tracking-tight text-white">AIBAR</p>
+        <p className="rotulo mt-0.5 text-marca-300">Depósito</p>
+      </div>
+
+      <ul className="flex flex-col gap-0.5 px-3">
+        {items.map((item) => (
+          <li key={item.a}>
+            <NavLink
+              to={item.a}
+              end
+              className={({ isActive }) =>
+                cx(
+                  'flex min-h-toque items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-marca-800 text-white'
+                    : 'text-marca-200 hover:bg-marca-900 hover:text-white',
+                )
+              }
+            >
+              <Icono nombre={item.icono} tamaño={19} />
+              {item.etiqueta}
             </NavLink>
           </li>
         ))}

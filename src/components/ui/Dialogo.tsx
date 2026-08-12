@@ -76,10 +76,10 @@ export function Dialogo({ abierto, onCerrar, titulo, bloqueado = false, children
       }}
     >
       <div
-        className="flex max-h-[85dvh] flex-col overflow-y-auto rounded-t-2xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-5"
+        className="flex max-h-[85dvh] flex-col overflow-y-auto rounded-t-xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:rounded-xl sm:pb-5"
         onClick={(evento) => evento.stopPropagation()}
       >
-        <h2 id="titulo-dialogo" className="mb-4 text-xl font-semibold text-neutral-900">
+        <h2 id="titulo-dialogo" className="mb-4 text-xl font-semibold text-piedra-900">
           {titulo}
         </h2>
 

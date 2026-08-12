@@ -75,8 +75,8 @@ export function AltaCliente() {
 
   return (
     <Card>
-      <h2 className="mb-1 text-xl font-semibold text-neutral-900">Nuevo cliente</h2>
-      <p className="mb-5 text-base text-neutral-600">
+      <h2 className="mb-1 text-xl font-semibold text-piedra-900">Nuevo cliente</h2>
+      <p className="mb-5 text-base text-piedra-600">
         Empresas cuya mercadería se guarda en el depósito. Después vas a poder asignarle
         palets.
       </p>

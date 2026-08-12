@@ -25,15 +25,15 @@ export function EmptyState({ icono, titulo, descripcion, accion, className }: Pr
       )}
     >
       {icono !== undefined && (
-        <div className="text-neutral-400" aria-hidden="true">
+        <div className="text-piedra-400" aria-hidden="true">
           {icono}
         </div>
       )}
 
-      <h2 className="text-lg font-semibold text-neutral-900">{titulo}</h2>
+      <h2 className="text-lg font-semibold text-piedra-900">{titulo}</h2>
 
       {descripcion !== undefined && (
-        <p className="max-w-sm text-base text-neutral-600">{descripcion}</p>
+        <p className="max-w-sm text-base text-piedra-600">{descripcion}</p>
       )}
 
       {accion !== undefined && <div className="mt-2">{accion}</div>}

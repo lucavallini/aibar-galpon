@@ -47,13 +47,13 @@ function FilaPendiente({ movimiento, onVerPalet, onReintentar, onDescartar }: Pr
     <Card className={cx(fallido && 'border-red-200 bg-red-50')}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-semibold text-neutral-900">
+          <p className="font-semibold text-piedra-900">
             {ETIQUETA_TIPO[movimiento.tipo]} de {movimiento.cantidad} {movimiento.unidad}
           </p>
-          <p className="mt-0.5 truncate text-sm text-neutral-600">
+          <p className="mt-0.5 truncate text-sm text-piedra-600">
             {movimiento.paletEtiqueta}
           </p>
-          <p className="mt-0.5 text-sm text-neutral-500">
+          <p className="mt-0.5 text-sm text-piedra-500">
             Registrado {formatearFechaHora(movimiento.creadoEn)}
           </p>
         </div>
@@ -119,7 +119,7 @@ export function Pendientes() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-base text-neutral-600">
+        <p className="text-base text-piedra-600">
           {enLinea ? 'Con señal' : 'Sin señal en este momento'}
         </p>
         <Button
@@ -138,7 +138,7 @@ export function Pendientes() {
             <h2 className="text-sm font-bold tracking-wide text-red-700 uppercase">
               No se pudieron registrar
             </h2>
-            <p className="mt-1 text-base text-neutral-600">
+            <p className="mt-1 text-base text-piedra-600">
               La base los rechazó. Revisá el motivo y decidí: reintentar si la situación
               cambió, o descartar si el movimiento ya no corresponde.
             </p>
@@ -159,10 +159,10 @@ export function Pendientes() {
       {enEspera.length > 0 && (
         <section className="flex flex-col gap-3">
           <div>
-            <h2 className="text-sm font-bold tracking-wide text-neutral-500 uppercase">
+            <h2 className="text-sm font-bold tracking-wide text-piedra-500 uppercase">
               Esperando señal
             </h2>
-            <p className="mt-1 text-base text-neutral-600">
+            <p className="mt-1 text-base text-piedra-600">
               Se van a registrar solos apenas haya conexión. No hace falta que hagas nada.
             </p>
           </div>
@@ -187,14 +187,14 @@ export function Pendientes() {
       >
         {aDescartar !== null && (
           <div className="flex flex-col gap-4">
-            <p className="text-base text-neutral-700">
+            <p className="text-base text-piedra-700">
               Vas a descartar la {ETIQUETA_TIPO[aDescartar.tipo].toLowerCase()} de{' '}
               <strong>
                 {aDescartar.cantidad} {aDescartar.unidad}
               </strong>{' '}
               del {aDescartar.paletEtiqueta}.
             </p>
-            <p className="text-base text-neutral-600">
+            <p className="text-base text-piedra-600">
               No se va a registrar nunca. Si la mercadería salió del depósito de verdad,
               el stock del sistema va a quedar más alto que el real.
             </p>

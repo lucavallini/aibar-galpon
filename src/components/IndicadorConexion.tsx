@@ -25,7 +25,7 @@ export function IndicadorConexion() {
       ? 'border-amber-300 bg-amber-50 text-amber-900'
       : pendientes > 0
         ? 'border-blue-300 bg-blue-50 text-blue-900'
-        : 'border-neutral-200 bg-neutral-50 text-neutral-600'
+        : 'border-piedra-200 bg-piedra-50 text-piedra-600'
 
   const texto = sincronizando
     ? 'Sincronizando…'

@@ -37,15 +37,15 @@ export function Select({
       value={value}
       defaultValue={valorPorDefecto}
       className={cx(
-        'block w-full min-h-toque appearance-none rounded-lg border bg-white px-3 py-2.5 text-base text-neutral-900',
+        'block w-full min-h-toque appearance-none rounded-md border bg-white px-3 py-2.5 text-base text-piedra-900',
         // Espacio a la derecha para la flecha dibujada de fondo.
         'bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat pr-10',
         "bg-[url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%23525252'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3e%3c/svg%3e\")]",
         'focus:outline-none focus:ring-2',
         invalido
           ? 'border-red-500 focus:border-red-600 focus:ring-red-500/30'
-          : 'border-neutral-300 focus:border-marca-600 focus:ring-marca-600/30',
-        'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
+          : 'border-piedra-300 focus:border-marca-600 focus:ring-marca-600/30',
+        'disabled:cursor-not-allowed disabled:bg-piedra-100 disabled:text-piedra-500',
         className,
       )}
       {...resto}

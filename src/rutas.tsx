@@ -78,15 +78,15 @@ export function rutaPalet(id: number, reciénCreado = false): string {
 /** Navegación del operario. Cada fase que agrega una pantalla suma su ítem acá. */
 /** Navegación de gerencia. El panel es de consulta salvo la gestión de usuarios. */
 const NAV_GERENCIA: ItemNav[] = [
-  { a: RUTAS.gerencia, etiqueta: 'Panel', icono: '📊' },
-  { a: RUTAS.usuarios, etiqueta: 'Usuarios', icono: '👤' },
+  { a: RUTAS.gerencia, etiqueta: 'Panel', icono: 'panel' },
+  { a: RUTAS.usuarios, etiqueta: 'Usuarios', icono: 'usuarios' },
 ]
 
 const NAV_OPERARIO: ItemNav[] = [
-  { a: RUTAS.operario, etiqueta: 'Inicio', icono: '🏠' },
-  { a: RUTAS.escanear, etiqueta: 'Escanear', icono: '📷' },
-  { a: RUTAS.buscarPalets, etiqueta: 'Palets', icono: '🔎' },
-  { a: RUTAS.nuevoPalet, etiqueta: 'Nuevo', icono: '➕' },
+  { a: RUTAS.operario, etiqueta: 'Inicio', icono: 'inicio' },
+  { a: RUTAS.escanear, etiqueta: 'Escanear', icono: 'escanear' },
+  { a: RUTAS.buscarPalets, etiqueta: 'Palets', icono: 'buscar' },
+  { a: RUTAS.nuevoPalet, etiqueta: 'Nuevo palet', icono: 'palet' },
 ]
 
 /**

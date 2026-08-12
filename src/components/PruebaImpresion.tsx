@@ -64,11 +64,11 @@ export function PruebaImpresion() {
   return (
     <Card className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="font-semibold text-neutral-900">Impresora NIIMBOT</h3>
+        <h3 className="font-semibold text-piedra-900">Impresora NIIMBOT</h3>
         <Badge variante={insignia.variante}>{insignia.texto}</Badge>
       </div>
 
-      <dl className="text-sm text-neutral-600">
+      <dl className="text-sm text-piedra-600">
         <div className="flex justify-between gap-4 py-1">
           <dt>Web Bluetooth</dt>
           <dd className="font-medium">{hayBluetooth ? 'disponible' : 'no disponible'}</dd>
@@ -97,7 +97,7 @@ export function PruebaImpresion() {
       {error !== null && <ErrorMessage mensaje={error} />}
 
       {trabajando && (
-        <p role="status" className="flex items-center gap-2 text-base text-neutral-600">
+        <p role="status" className="flex items-center gap-2 text-base text-piedra-600">
           <Spinner tamaño="sm" decorativo />
           {estado === 'conectando' ? 'Buscando la impresora…' : 'Imprimiendo…'}
         </p>
@@ -108,9 +108,9 @@ export function PruebaImpresion() {
           <img
             src={vistaPrevia}
             alt="Vista previa de la etiqueta"
-            className="w-full rounded-lg border border-neutral-300"
+            className="w-full rounded-lg border border-piedra-300"
           />
-          <figcaption className="text-center text-xs text-neutral-500">
+          <figcaption className="text-center text-xs text-piedra-500">
             Así sale la etiqueta: 47,4 × 29,8 mm a 300 dpi (560 × 352 px)
           </figcaption>
         </figure>
@@ -146,7 +146,7 @@ export function PruebaImpresion() {
       </div>
 
       {!hayBluetooth && (
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-piedra-500">
           Este navegador no expone <code>navigator.bluetooth</code>. La vista previa
           funciona igual; la impresión necesita Chrome, Chromium o Edge.
         </p>

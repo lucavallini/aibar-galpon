@@ -34,10 +34,10 @@ function FilaDePalet({ palet, onAbrir }: PropsFila) {
     <Card comoBoton onClick={onAbrir}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-base font-semibold text-neutral-900">
+          <p className="truncate text-base font-semibold text-piedra-900">
             #{palet.id} · {palet.producto.nombre}
           </p>
-          <p className="mt-0.5 truncate text-sm text-neutral-500">
+          <p className="mt-0.5 truncate text-sm text-piedra-500">
             Lote {palet.lote} · Galpón {palet.galpon}
             {palet.sector !== null && ` · ${palet.sector}`}
           </p>
@@ -45,7 +45,7 @@ function FilaDePalet({ palet, onAbrir }: PropsFila) {
 
         <div className="shrink-0 text-right">
           <p className="text-xl font-bold text-marca-800">{palet.cantidad_disponible}</p>
-          <p className="text-xs text-neutral-500">{palet.producto.unidad_medida}</p>
+          <p className="text-xs text-piedra-500">{palet.producto.unidad_medida}</p>
         </div>
       </div>
 
@@ -84,7 +84,7 @@ export function BuscarPalets() {
   return (
     <div className="flex flex-col gap-4">
       <Card className="flex flex-col gap-3">
-        <label htmlFor="buscar-palet" className="text-base font-medium text-neutral-800">
+        <label htmlFor="buscar-palet" className="text-base font-medium text-piedra-800">
           Buscar palet
         </label>
 
@@ -101,7 +101,7 @@ export function BuscarPalets() {
         {/* Filtro por galpón: botones y no un select, porque son tres opciones
             y se tocan con guantes. */}
         <div>
-          <p className="mb-1.5 text-sm font-medium text-neutral-600">Galpón</p>
+          <p className="mb-1.5 text-sm font-medium text-piedra-600">Galpón</p>
           <div className="flex gap-2">
             <Button
               variante={galpon === undefined ? 'primario' : 'secundario'}
@@ -130,7 +130,7 @@ export function BuscarPalets() {
             onChange={(evento) => setSoloConStock(evento.target.checked)}
             className="size-5 accent-marca-700"
           />
-          <span className="text-base text-neutral-700">
+          <span className="text-base text-piedra-700">
             Solo palets con stock
           </span>
         </label>
@@ -157,7 +157,7 @@ export function BuscarPalets() {
         />
       ) : (
         <>
-          <p className={cx('text-sm text-neutral-500', isFetching && 'opacity-60')}>
+          <p className={cx('text-sm text-piedra-500', isFetching && 'opacity-60')}>
             {palets.length} palet{palets.length === 1 ? '' : 's'}
             {hasNextPage === true && ' (hay más)'}
           </p>

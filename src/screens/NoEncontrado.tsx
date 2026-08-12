@@ -11,7 +11,7 @@ export function NoEncontrado() {
   const destino = rol === null ? RUTAS.login : RUTA_INICIAL_POR_ROL[rol]
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-neutral-50">
+    <main className="flex h-full items-center justify-center overflow-y-auto bg-piedra-100">
       <EmptyState
         titulo="Página no encontrada"
         descripcion="La dirección a la que entraste no existe."

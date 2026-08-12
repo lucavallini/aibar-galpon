@@ -22,7 +22,7 @@ export function AbrirPalet() {
 
   if (idNumerico === null) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-neutral-50">
+      <main className="flex h-full items-center justify-center overflow-y-auto bg-piedra-100">
         <EmptyState
           titulo="Código QR no válido"
           descripcion="Este código no corresponde a ningún palet. Puede estar dañado o pertenecer a otro sistema."

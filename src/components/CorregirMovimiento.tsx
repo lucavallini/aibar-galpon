@@ -98,12 +98,12 @@ export function CorregirMovimiento({ palet, movimiento, onCerrar }: Props) {
     >
       {movimiento !== null && !listo && (
         <Form onSubmit={(evento) => void handleSubmit(confirmar)(evento)}>
-          <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
-            <p className="text-base text-neutral-600">Vas a deshacer</p>
-            <p className="mt-1 text-xl font-bold text-neutral-900">
+          <div className="rounded-lg border border-piedra-200 bg-piedra-50 p-4">
+            <p className="text-base text-piedra-600">Vas a deshacer</p>
+            <p className="mt-1 text-xl font-bold text-piedra-900">
               {ETIQUETA_TIPO[movimiento.tipo]} de {movimiento.cantidad} {unidad}
             </p>
-            <p className="mt-2 text-sm text-neutral-500">
+            <p className="mt-2 text-sm text-piedra-500">
               Palet #{palet.id} · {palet.producto.nombre}
             </p>
           </div>
@@ -133,7 +133,7 @@ export function CorregirMovimiento({ palet, movimiento, onCerrar }: Props) {
             )}
           </Field>
 
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-piedra-500">
             El movimiento original no se borra: queda en el historial junto con esta
             corrección.
           </p>

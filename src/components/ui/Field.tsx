@@ -59,7 +59,7 @@ export function Field({
 
   return (
     <div className={cx('flex flex-col gap-1.5', className)}>
-      <label htmlFor={id} className="text-base font-medium text-neutral-800">
+      <label htmlFor={id} className="text-base font-medium text-piedra-800">
         {label}
         {requerido && (
           <span className="ml-0.5 text-red-700" aria-hidden="true">
@@ -76,7 +76,7 @@ export function Field({
       })}
 
       {hayAyuda && !hayError && (
-        <p id={idAyuda} className="text-sm text-neutral-500">
+        <p id={idAyuda} className="text-sm text-piedra-500">
           {ayuda}
         </p>
       )}

@@ -70,9 +70,9 @@ export function EtiquetaPalet({ id, producto, lote, cantidad }: Props) {
 
   return (
     <Card className="flex flex-col items-center gap-4">
-      <h2 className="text-lg font-semibold text-neutral-900">Código QR</h2>
+      <h2 className="text-lg font-semibold text-piedra-900">Código QR</h2>
 
-      <div className="rounded-lg border border-neutral-200 bg-white p-3">
+      <div className="rounded-lg border border-piedra-200 bg-white p-3">
         <QRCodeCanvas
           value={url}
           size={LADO_QR_PANTALLA}
@@ -93,7 +93,7 @@ export function EtiquetaPalet({ id, producto, lote, cantidad }: Props) {
         />
       </div>
 
-      <p className="text-center text-sm break-all text-neutral-500">{url}</p>
+      <p className="text-center text-sm break-all text-piedra-500">{url}</p>
 
       {!dominioListo && (
         <ErrorMessage
@@ -144,7 +144,7 @@ export function EtiquetaPalet({ id, producto, lote, cantidad }: Props) {
             <p
               role="status"
               aria-live="polite"
-              className="flex items-center justify-center gap-2 text-base text-neutral-600"
+              className="flex items-center justify-center gap-2 text-base text-piedra-600"
             >
               <Spinner tamaño="sm" decorativo />
               {estado === 'conectando'
@@ -180,7 +180,7 @@ export function EtiquetaPalet({ id, producto, lote, cantidad }: Props) {
           </div>
 
           {estado === 'desconectada' && (
-            <p className="text-center text-sm text-neutral-500">
+            <p className="text-center text-sm text-piedra-500">
               Encendé la impresora y tocá «Imprimir etiqueta»: el teléfono te va a pedir
               que la elijas de la lista.
             </p>

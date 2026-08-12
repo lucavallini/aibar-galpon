@@ -140,7 +140,7 @@ export function AltaPalet() {
 
   return (
     <Card>
-      <h2 className="mb-5 text-xl font-semibold text-neutral-900">Nuevo palet</h2>
+      <h2 className="mb-5 text-xl font-semibold text-piedra-900">Nuevo palet</h2>
 
       <Form onSubmit={(evento) => void handleSubmit(guardar)(evento)}>
         <Field label="Producto" error={errors.productoId?.message} requerido>
@@ -258,8 +258,8 @@ export function AltaPalet() {
         </Button>
 
         {categoria === 'agroquimico' && (
-          <fieldset className="flex flex-col gap-5 rounded-lg border border-neutral-200 p-4">
-            <legend className="px-1 text-sm font-semibold text-neutral-500 uppercase">
+          <fieldset className="flex flex-col gap-5 rounded-lg border border-piedra-200 p-4">
+            <legend className="px-1 text-sm font-semibold text-piedra-500 uppercase">
               Datos del agroquímico
             </legend>
 
@@ -296,8 +296,8 @@ export function AltaPalet() {
         )}
 
         {categoria === 'semilla' && (
-          <fieldset className="flex flex-col gap-5 rounded-lg border border-neutral-200 p-4">
-            <legend className="px-1 text-sm font-semibold text-neutral-500 uppercase">
+          <fieldset className="flex flex-col gap-5 rounded-lg border border-piedra-200 p-4">
+            <legend className="px-1 text-sm font-semibold text-piedra-500 uppercase">
               Datos de la semilla
             </legend>
 
@@ -325,7 +325,7 @@ export function AltaPalet() {
               rows={2}
               maxLength={500}
               placeholder="Ej. 2 bidones pinchados"
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-base text-neutral-900 placeholder:text-neutral-400 focus:border-marca-600 focus:ring-2 focus:ring-marca-600/30 focus:outline-none"
+              className="w-full rounded-lg border border-piedra-300 px-3 py-2.5 text-base text-piedra-900 placeholder:text-piedra-400 focus:border-marca-600 focus:ring-2 focus:ring-marca-600/30 focus:outline-none"
             />
           )}
         </Field>

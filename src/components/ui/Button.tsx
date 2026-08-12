@@ -26,13 +26,13 @@ type Props =
 
 const CLASES_POR_VARIANTE: Record<VarianteBoton, string> = {
   primario:
-    'bg-marca-700 text-white hover:bg-marca-800 active:bg-marca-900 disabled:bg-neutral-400',
+    'bg-marca-700 text-white hover:bg-marca-800 active:bg-marca-900 disabled:bg-piedra-400',
   secundario:
-    'border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-100 active:bg-neutral-200 disabled:text-neutral-400',
+    'border border-piedra-300 bg-white text-piedra-800 hover:bg-piedra-50 active:bg-piedra-100 disabled:text-piedra-400',
   peligro:
-    'bg-red-700 text-white hover:bg-red-800 active:bg-red-900 disabled:bg-neutral-400',
+    'bg-red-700 text-white hover:bg-red-800 active:bg-red-900 disabled:bg-piedra-400',
   fantasma:
-    'text-neutral-700 hover:bg-neutral-100 active:bg-neutral-200 disabled:text-neutral-400',
+    'text-piedra-700 hover:bg-piedra-100 active:bg-piedra-200 disabled:text-piedra-400',
 }
 
 const CLASES_POR_TAMAÑO: Record<TamañoBoton, string> = {
@@ -66,7 +66,7 @@ export function Button({
       disabled={disabled === true || cargando}
       aria-busy={cargando || undefined}
       className={cx(
-        'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors',
+        'inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-600 focus-visible:ring-offset-2',
         'disabled:cursor-not-allowed',
         CLASES_POR_VARIANTE[variante],

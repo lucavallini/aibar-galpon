@@ -30,7 +30,7 @@ export function SinAcceso() {
     usuario?.email !== undefined ? ` (${usuario.email})` : ''
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-neutral-50">
+    <main className="flex h-full items-center justify-center overflow-y-auto bg-piedra-100">
       <EmptyState
         titulo="Cuenta sin acceso"
         descripcion={`Tu cuenta${detalleCuenta} está registrada pero todavía no está habilitada para usar el sistema. Pedile al encargado del depósito que la active.`}

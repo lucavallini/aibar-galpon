@@ -66,12 +66,12 @@ function FilaUsuario({
   ocupado,
 }: PropsFila) {
   return (
-    <Card className={cx(!usuario.activo && 'bg-neutral-50 opacity-75')}>
+    <Card className={cx(!usuario.activo && 'bg-piedra-50 opacity-75')}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate font-semibold text-neutral-900">
+          <p className="truncate font-semibold text-piedra-900">
             {usuario.nombre}
-            {esUnoMismo && <span className="ml-2 text-sm text-neutral-500">(vos)</span>}
+            {esUnoMismo && <span className="ml-2 text-sm text-piedra-500">(vos)</span>}
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <Badge variante={usuario.rol === 'jefe' ? 'info' : 'neutral'}>
@@ -156,8 +156,8 @@ export function Usuarios() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-neutral-900">Usuarios</h2>
-          <p className="text-sm text-neutral-500">
+          <h2 className="text-lg font-semibold text-piedra-900">Usuarios</h2>
+          <p className="text-sm text-piedra-500">
             Quién puede entrar al sistema y con qué permisos.
           </p>
         </div>

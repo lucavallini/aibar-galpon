@@ -21,7 +21,11 @@ type PropsInteractiva = PropsComunes &
 
 type Props = PropsEstatica | PropsInteractiva
 
-const CLASES_BASE = 'rounded-xl border border-neutral-200 bg-white shadow-sm'
+/**
+ * Borde fino y sin sombra: el contenido se separa del fondo por contraste, no
+ * por elevación. Una pila de tarjetas con sombra se lee como ruido.
+ */
+const CLASES_BASE = 'rounded-lg border border-piedra-200 bg-white'
 
 /**
  * Contenedor de contenido.
@@ -40,7 +44,7 @@ export function Card(props: Props) {
         className={cx(
           CLASES_BASE,
           'block w-full min-h-toque text-left transition-colors',
-          'hover:border-neutral-300 hover:bg-neutral-50 active:bg-neutral-100',
+          'hover:border-piedra-300 hover:bg-piedra-50 active:bg-piedra-100',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-600 focus-visible:ring-offset-2',
           sinPadding !== true && 'p-4',
           className,
