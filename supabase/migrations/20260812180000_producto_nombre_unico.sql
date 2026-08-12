@@ -1,0 +1,60 @@
+-- =========================================================
+-- AIBAR
+-- NOMBRE DE PRODUCTO ÚNICO
+-- =========================================================
+--
+-- OPCIONAL. Aplicala solo si querés que la base impida los
+-- productos duplicados.
+--
+--
+-- PROBLEMA QUE RESUELVE
+--
+-- La pantalla de alta avisa si ya existe un producto con el
+-- mismo nombre, pero esa comprobación es del lado del
+-- cliente: consulta, y después inserta. Entre esas dos
+-- cosas, otro operario puede haber insertado el mismo
+-- producto, y los dos pasan.
+--
+-- El resultado son dos filas «Glifosato 48%» con ids
+-- distintos, y palets repartidos entre ambas: los listados y
+-- cualquier total por producto quedan partidos al medio.
+--
+-- Un índice único lo vuelve imposible, porque la
+-- verificación pasa a ocurrir dentro de la misma transacción
+-- que el INSERT.
+--
+--
+-- POR QUÉ ES SOBRE lower(trim(...))
+--
+-- Sin normalizar, «Glifosato 48%», «glifosato 48%» y
+-- «Glifosato 48% » serían tres productos distintos para
+-- Postgres, que es justo lo que se quiere evitar. El índice
+-- funcional compara el nombre sin espacios de sobra ni
+-- diferencias de mayúsculas.
+--
+--
+-- ANTES DE APLICARLA
+--
+-- Si ya hay duplicados cargados, el índice no se va a poder
+-- crear. Para encontrarlos:
+--
+--   SELECT lower(btrim(nombre)) AS nombre_normalizado,
+--          count(*),
+--          array_agg(id) AS ids
+--   FROM public.producto
+--   GROUP BY 1
+--   HAVING count(*) > 1;
+--
+-- Hay que unificarlos a mano antes: repuntar los palets al
+-- id que quede (UPDATE public.palet SET producto_id = ...)
+-- y recién ahí borrar el sobrante.
+--
+-- =========================================================
+
+CREATE UNIQUE INDEX IF NOT EXISTS producto_nombre_unico
+ON public.producto (lower(btrim(nombre)));
+
+
+-- =========================================================
+-- FIN
+-- =========================================================

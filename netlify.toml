@@ -1,0 +1,20 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# La app es una SPA: el ruteo lo resuelve React Router en el navegador, no el
+# servidor. Sin esta redirección, entrar directo a una URL profunda —que es
+# justamente lo que hace alguien al escanear el QR de un palet, `/p/152`—
+# devolvería 404, porque en el servidor no existe ningún archivo con ese nombre.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# El service worker no puede quedar cacheado: si el navegador se queda con uno
+# viejo, la PWA sigue sirviendo una versión anterior de la app aunque se
+# despliegue una nueva.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
