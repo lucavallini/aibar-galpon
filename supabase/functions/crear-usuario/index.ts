@@ -1,7 +1,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 /**
- * Alta de usuarios, hecha por el gerente.
+ * Alta de usuarios por DNI, hecha por el gerente.
  *
  * ¿Por qué una función y no una pantalla que llame a Supabase directo? Porque
  * crear cuentas necesita la clave `service_role`, y esa clave abre la base
@@ -26,11 +26,22 @@ const CORS = {
 }
 
 interface Cuerpo {
-  email?: string
+  dni?: string
   password?: string
   nombre?: string
   rol?: 'operario' | 'jefe'
 }
+
+/**
+ * Dominio interno de los identificadores de cuenta.
+ *
+ * Supabase Auth solo autentica por email, así que cada DNI se convierte en uno:
+ * `30123456@aibar.local`. Ese correo no existe ni se usa —no se manda un solo
+ * mail y las cuentas se crean confirmadas—; es un identificador con forma de
+ * email. `.local` está reservado para redes internas, así que nunca va a chocar
+ * con un dominio real.
+ */
+const DOMINIO_INTERNO = 'aibar.local'
 
 function responder(cuerpo: unknown, status: number): Response {
   return new Response(JSON.stringify(cuerpo), {
@@ -119,14 +130,19 @@ Deno.serve(async (peticion: Request) => {
     return error('No se entendió el pedido.', 400)
   }
 
-  const email = cuerpo.email?.trim().toLowerCase() ?? ''
+  const dni = cuerpo.dni?.trim().replace(/[.\s]/g, '') ?? ''
   const password = cuerpo.password ?? ''
   const nombre = cuerpo.nombre?.trim() ?? ''
   const rol = cuerpo.rol ?? 'operario'
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return error('El email no es válido.', 400)
+  // Se aceptan puntos y espacios al escribirlo —30.123.456— pero se guardan
+  // solo los dígitos: si no, el mismo documento entraría dos veces escrito
+  // distinto y el índice único no lo detectaría.
+  if (!/^\d{7,10}$/.test(dni)) {
+    return error('El DNI tiene que tener entre 7 y 10 números.', 400)
   }
+
+  const email = `${dni}@${DOMINIO_INTERNO}`
 
   if (password.length < 8) {
     return error('La contraseña tiene que tener al menos 8 caracteres.', 400)
@@ -152,14 +168,14 @@ Deno.serve(async (peticion: Request) => {
     // Sin confirmación por correo: la cuenta la crea el gerente en persona y la
     // persona tiene que poder entrar enseguida.
     email_confirm: true,
-    user_metadata: { nombre },
+    user_metadata: { nombre, dni },
   })
 
   if (errorAlta !== null || creado.user === null) {
     console.error('[crear-usuario] fallo el alta', errorAlta)
 
     if (errorAlta?.message.includes('already been registered') === true) {
-      return error('Ya existe un usuario con ese email.', 409)
+      return error('Ya hay un usuario cargado con ese DNI.', 409)
     }
 
     return error('No se pudo crear el usuario. Probá de nuevo.', 500)
@@ -194,5 +210,5 @@ Deno.serve(async (peticion: Request) => {
     }
   }
 
-  return responder({ id: creado.user.id, email, nombre, rol }, 201)
+  return responder({ id: creado.user.id, dni, nombre, rol }, 201)
 })

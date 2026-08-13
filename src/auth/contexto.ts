@@ -37,7 +37,7 @@ export interface ContextoAuth {
   /** `true` mientras no se sepa si hay sesión. Atajo de `estado === 'cargando'`. */
   cargando: boolean
   /** @throws {ErrorAutenticacion} con un mensaje ya en español. */
-  iniciarSesion: (email: string, password: string) => Promise<void>
+  iniciarSesion: (dni: string, password: string) => Promise<void>
   cerrarSesion: () => Promise<void>
 }
 

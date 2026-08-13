@@ -48,6 +48,11 @@ export type Galpon = 1 | 2 | 3
 type UsuarioRow = {
   id: string
   nombre: string
+  /**
+   * Con el que entra a la app. `null` en las cuentas creadas a mano con email
+   * real, como la del primer gerente.
+   */
+  dni: string | null
   rol: Rol
   activo: boolean
   created_at: string

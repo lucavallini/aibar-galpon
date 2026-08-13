@@ -1,4 +1,4 @@
-import type { EstadoPalet, Galpon } from '@/types'
+import type { Categoria, EstadoPalet, Galpon } from '@/types'
 
 /**
  * Claves de React Query, centralizadas.
@@ -17,8 +17,12 @@ interface FiltrosPaletClave {
 }
 
 interface FiltrosBusquedaClave {
-  texto?: string
+  numero?: string
+  lote?: string
+  sector?: string
+  producto?: string
   galpon?: Galpon
+  categoria?: Categoria
   soloConStock?: boolean
 }
 

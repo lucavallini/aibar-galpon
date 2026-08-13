@@ -11,15 +11,18 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EstadoPaletBadge } from '@/components/EstadoPaletBadge'
 import { cx } from '@/lib/cx'
 import { rutaPalet } from '@/rutas'
-import type { Galpon, PaletConProducto } from '@/types'
+import type { Categoria, Galpon, PaletConProducto } from '@/types'
 
 /**
  * Listado y búsqueda de palets.
  *
  * Es el camino alternativo al QR: cuando la etiqueta se despegó, se mojó o no
- * lee, esta pantalla es la única forma de llegar a un palet. Por eso busca por
- * lo que se pueda tener a mano —el número, el lote del remito o el producto— y
- * no solo por un campo.
+ * lee, esta pantalla es la única forma de llegar a un palet.
+ *
+ * Cada dato tiene su casilla en vez de un buscador único. Con un solo campo, el
+ * operario no sabe qué se espera que escriba —¿el número?, ¿el lote?— y no
+ * puede combinar dos criterios. Separados, cada casilla dice exactamente qué
+ * lleva, y se pueden usar juntas: el lote «A» *dentro del* sector «Pasillo B».
  */
 
 const GALPONES: Galpon[] = [1, 2, 3]
@@ -35,17 +38,22 @@ function FilaDePalet({ palet, onAbrir }: PropsFila) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-base font-semibold text-piedra-900">
-            #{palet.id} · {palet.producto.nombre}
+            <span className="cifra text-piedra-500">#{palet.id}</span>{' '}
+            {palet.producto.nombre}
           </p>
           <p className="mt-0.5 truncate text-sm text-piedra-500">
             Lote {palet.lote} · Galpón {palet.galpon}
-            {palet.sector !== null && ` · ${palet.sector}`}
+            {palet.sector !== null && (
+              <span className="font-medium text-piedra-700"> · {palet.sector}</span>
+            )}
           </p>
         </div>
 
         <div className="shrink-0 text-right">
-          <p className="text-xl font-bold text-marca-800">{palet.cantidad_disponible}</p>
-          <p className="text-xs text-piedra-500">{palet.producto.unidad_medida}</p>
+          <p className="cifra text-xl leading-none font-bold text-piedra-900">
+            {palet.cantidad_disponible}
+          </p>
+          <p className="mt-0.5 text-xs text-piedra-500">{palet.producto.unidad_medida}</p>
         </div>
       </div>
 
@@ -56,15 +64,58 @@ function FilaDePalet({ palet, onAbrir }: PropsFila) {
   )
 }
 
+interface PropsCampo {
+  id: string
+  etiqueta: string
+  valor: string
+  onCambiar: (valor: string) => void
+  placeholder: string
+  soloNumeros?: boolean
+}
+
+function Campo({ id, etiqueta, valor, onCambiar, placeholder, soloNumeros }: PropsCampo) {
+  return (
+    <div>
+      <label htmlFor={id} className="rotulo mb-1 block">
+        {etiqueta}
+      </label>
+      <Input
+        id={id}
+        type="search"
+        value={valor}
+        onChange={(evento) => onCambiar(evento.target.value)}
+        placeholder={placeholder}
+        // Teclado numérico para el número de palet: menos errores de tipeo con
+        // guantes que el alfanumérico completo.
+        inputMode={soloNumeros === true ? 'numeric' : 'search'}
+        autoComplete="off"
+      />
+    </div>
+  )
+}
+
 export function BuscarPalets() {
   const navegar = useNavigate()
 
-  const [texto, setTexto] = useState('')
-  // El campo se actualiza en cada tecla, pero la consulta espera a que el
-  // operario termine de escribir.
-  const textoBuscado = useValorDemorado(texto)
+  const [numero, setNumero] = useState('')
+  const [lote, setLote] = useState('')
+  const [sector, setSector] = useState('')
+  const [producto, setProducto] = useState('')
   const [galpon, setGalpon] = useState<Galpon | undefined>(undefined)
+  const [categoria, setCategoria] = useState<Categoria | undefined>(undefined)
   const [soloConStock, setSoloConStock] = useState(true)
+
+  // Los campos se actualizan en cada tecla, pero la consulta espera a que el
+  // operario termine de escribir.
+  const filtros = {
+    numero: useValorDemorado(numero),
+    lote: useValorDemorado(lote),
+    sector: useValorDemorado(sector),
+    producto: useValorDemorado(producto),
+    galpon,
+    categoria,
+    soloConStock,
+  }
 
   const {
     data,
@@ -76,32 +127,95 @@ export function BuscarPalets() {
     hasNextPage,
     isFetchingNextPage,
     isFetching,
-  } = useBuscarPalets({ texto: textoBuscado, galpon, soloConStock })
+  } = useBuscarPalets(filtros)
 
   const palets = data?.pages.flatMap((pagina) => pagina.palets) ?? []
-  const hayFiltros = textoBuscado.trim() !== '' || galpon !== undefined || !soloConStock
+
+  const hayFiltros =
+    filtros.numero.trim() !== '' ||
+    filtros.lote.trim() !== '' ||
+    filtros.sector.trim() !== '' ||
+    filtros.producto.trim() !== '' ||
+    galpon !== undefined ||
+    categoria !== undefined ||
+    !soloConStock
+
+  function limpiar() {
+    setNumero('')
+    setLote('')
+    setSector('')
+    setProducto('')
+    setGalpon(undefined)
+    setCategoria(undefined)
+    setSoloConStock(true)
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="flex flex-col gap-3">
-        <label htmlFor="buscar-palet" className="text-base font-medium text-piedra-800">
-          Buscar palet
-        </label>
+      <Card className="flex flex-col gap-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Campo
+            id="buscar-numero"
+            etiqueta="Número de palet"
+            valor={numero}
+            onCambiar={setNumero}
+            placeholder="Ej. 152"
+            soloNumeros
+          />
+          <Campo
+            id="buscar-lote"
+            etiqueta="Lote"
+            valor={lote}
+            onCambiar={setLote}
+            placeholder="Ej. L-2026"
+          />
+          <Campo
+            id="buscar-sector"
+            etiqueta="Sector"
+            valor={sector}
+            onCambiar={setSector}
+            placeholder="Ej. Pasillo B"
+          />
+          <Campo
+            id="buscar-producto"
+            etiqueta="Producto"
+            valor={producto}
+            onCambiar={setProducto}
+            placeholder="Ej. Glifosato"
+          />
+        </div>
 
-        <Input
-          id="buscar-palet"
-          type="search"
-          value={texto}
-          onChange={(evento) => setTexto(evento.target.value)}
-          placeholder="Número, lote o producto"
-          inputMode="search"
-          autoComplete="off"
-        />
-
-        {/* Filtro por galpón: botones y no un select, porque son tres opciones
-            y se tocan con guantes. */}
+        {/* Tipo y galpón van como botones y no como selects: son pocas
+            opciones, se ven todas de una y se tocan con guantes. */}
         <div>
-          <p className="mb-1.5 text-sm font-medium text-piedra-600">Galpón</p>
+          <p className="rotulo mb-1.5">Tipo</p>
+          <div className="flex gap-2">
+            <Button
+              variante={categoria === undefined ? 'primario' : 'secundario'}
+              onClick={() => setCategoria(undefined)}
+              className="flex-1"
+            >
+              Todos
+            </Button>
+            <Button
+              variante={categoria === 'agroquimico' ? 'primario' : 'secundario'}
+              onClick={() => setCategoria('agroquimico')}
+              className="flex-1"
+            >
+              Agroquímicos
+            </Button>
+            <Button
+              variante={categoria === 'semilla' ? 'primario' : 'secundario'}
+              onClick={() => setCategoria('semilla')}
+              className="flex-1"
+            >
+              Semillas
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <p className="rotulo mb-1.5">Galpón</p>
           <div className="flex gap-2">
             <Button
               variante={galpon === undefined ? 'primario' : 'secundario'}
@@ -110,30 +224,36 @@ export function BuscarPalets() {
             >
               Todos
             </Button>
-            {GALPONES.map((numero) => (
+            {GALPONES.map((numeroGalpon) => (
               <Button
-                key={numero}
-                variante={galpon === numero ? 'primario' : 'secundario'}
-                onClick={() => setGalpon(numero)}
+                key={numeroGalpon}
+                variante={galpon === numeroGalpon ? 'primario' : 'secundario'}
+                onClick={() => setGalpon(numeroGalpon)}
                 className="flex-1"
               >
-                {numero}
+                {numeroGalpon}
               </Button>
             ))}
           </div>
         </div>
 
-        <label className="flex min-h-toque cursor-pointer items-center gap-3">
-          <input
-            type="checkbox"
-            checked={soloConStock}
-            onChange={(evento) => setSoloConStock(evento.target.checked)}
-            className="size-5 accent-marca-700"
-          />
-          <span className="text-base text-piedra-700">
-            Solo palets con stock
-          </span>
-        </label>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <label className="flex min-h-toque cursor-pointer items-center gap-3">
+            <input
+              type="checkbox"
+              checked={soloConStock}
+              onChange={(evento) => setSoloConStock(evento.target.checked)}
+              className="size-5 accent-marca-700"
+            />
+            <span className="text-base text-piedra-700">Solo palets con stock</span>
+          </label>
+
+          {hayFiltros && (
+            <Button variante="fantasma" onClick={limpiar}>
+              Limpiar búsqueda
+            </Button>
+          )}
+        </div>
       </Card>
 
       {isPending ? (
@@ -151,7 +271,7 @@ export function BuscarPalets() {
           titulo={hayFiltros ? 'No se encontró ningún palet' : 'Todavía no hay palets'}
           descripcion={
             hayFiltros
-              ? 'Probá con otro número, otro lote, o sacá los filtros. Si el palet está vacío o dado de baja, destildá «Solo palets con stock».'
+              ? 'Probá con menos casillas: cuantas más completes, más se achica la búsqueda. Si el palet está vacío o dado de baja, destildá «Solo palets con stock».'
               : 'Cuando des de alta el primer palet va a aparecer acá.'
           }
         />

@@ -159,7 +159,9 @@ function FilaPalet({ palet, onAbrir }: { palet: PaletGerencia; onAbrir: () => vo
           </p>
           <p className="mt-0.5 text-sm text-piedra-500">
             Lote {palet.lote} · Galpón {palet.galpon}
-            {palet.sector !== null && ` · ${palet.sector}`}
+            {palet.sector !== null && (
+              <span className="font-medium text-piedra-700"> · {palet.sector}</span>
+            )}
           </p>
           {palet.cliente_nombre !== null && (
             <p className="mt-0.5 truncate text-sm font-medium text-piedra-600">
@@ -221,9 +223,11 @@ export function PanelGerencia() {
   const [productoId, setProductoId] = useState<number | undefined>(undefined)
   const [clienteId, setClienteId] = useState<number | 'propia' | undefined>(undefined)
   const [lote, setLote] = useState('')
+  const [sector, setSector] = useState('')
   // Igual que en el buscador del operario: sin esto, cada tecla del filtro de
   // lote es una consulta.
   const loteBuscado = useValorDemorado(lote)
+  const sectorBuscado = useValorDemorado(sector)
   const [actualizado, setActualizado] = useState(() => new Date())
 
   const { data: productos } = useProductos()
@@ -231,7 +235,7 @@ export function PanelGerencia() {
   const alertas = useAlertas()
   const { data: stock, isPending: cargandoStock } = useStockPorProducto()
 
-  const filtros = { pregunta, galpon, categoria, estado, productoId, clienteId, lote: loteBuscado }
+  const filtros = { pregunta, galpon, categoria, estado, productoId, clienteId, lote: loteBuscado, sector: sectorBuscado }
   const { data: palets, isPending, isError, error, isFetching } = usePaletsGerencia(filtros)
 
   function refrescar() {
@@ -378,7 +382,7 @@ export function PanelGerencia() {
 
         <p className="-mt-2 text-sm text-piedra-500">{PREGUNTAS[pregunta].explica}</p>
 
-        <Card className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Card className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label
               htmlFor="filtro-lote"
@@ -392,6 +396,22 @@ export function PanelGerencia() {
               value={lote}
               onChange={(evento) => setLote(evento.target.value)}
               placeholder="Buscar por lote"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="filtro-sector"
+              className="mb-1 block text-sm font-medium text-piedra-700"
+            >
+              Sector
+            </label>
+            <Input
+              id="filtro-sector"
+              type="search"
+              value={sector}
+              onChange={(evento) => setSector(evento.target.value)}
+              placeholder="Ej. Pasillo B"
             />
           </div>
 
@@ -491,7 +511,7 @@ export function PanelGerencia() {
             </Select>
           </div>
 
-          <div className="sm:col-span-2 lg:col-span-3">
+          <div className="sm:col-span-2 lg:col-span-4">
             <p className="mb-1 text-sm font-medium text-piedra-700">Galpón</p>
             <div className="flex gap-2">
               <Button

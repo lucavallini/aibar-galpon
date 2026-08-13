@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button'
  * ninguna explicación.
  */
 export function SinAcceso() {
-  const { usuario, cerrarSesion } = useAuth()
+  const { perfil, cerrarSesion } = useAuth()
   const [saliendo, setSaliendo] = useState(false)
 
   async function manejarSalir() {
@@ -26,8 +26,9 @@ export function SinAcceso() {
     }
   }
 
-  const detalleCuenta =
-    usuario?.email !== undefined ? ` (${usuario.email})` : ''
+  // El DNI y no el email: el correo de la cuenta es un identificador interno
+  // que la persona nunca vio ni tiene por qué reconocer.
+  const detalleCuenta = perfil?.dni != null ? ` (DNI ${perfil.dni})` : ''
 
   return (
     <main className="flex h-full items-center justify-center overflow-y-auto bg-piedra-100">

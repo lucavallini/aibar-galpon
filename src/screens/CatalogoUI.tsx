@@ -199,7 +199,7 @@ export function CatalogoUI() {
       </Seccion>
 
       <Seccion titulo="Errores">
-        <ErrorMessage mensaje="Email o contraseña incorrectos." />
+        <ErrorMessage mensaje="DNI o contraseña incorrectos." />
         <ErrorMessage
           titulo="No se pudo cargar el depósito"
           mensaje="Stock insuficiente. Disponible: 12, solicitado: 20"

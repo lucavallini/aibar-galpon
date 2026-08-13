@@ -18,7 +18,7 @@ export function Login() {
   const { estado, rol, iniciarSesion } = useAuth()
   const ubicacion = useLocation()
 
-  const [email, setEmail] = useState('')
+  const [dni, setDni] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
@@ -42,8 +42,8 @@ export function Login() {
     evento.preventDefault()
 
     // Validación de UX nada más: la de verdad la hace Supabase.
-    if (email.trim() === '' || password === '') {
-      setError('Completá tu email y tu contraseña.')
+    if (dni.trim() === '' || password === '') {
+      setError('Completá tu DNI y tu contraseña.')
       return
     }
 
@@ -51,7 +51,7 @@ export function Login() {
     setError(null)
 
     try {
-      await iniciarSesion(email, password)
+      await iniciarSesion(dni, password)
       // No se navega a mano: al cambiar la sesión, el redirect de arriba se
       // encarga en cuanto el perfil termina de cargar.
     } catch (fallo: unknown) {
@@ -79,18 +79,21 @@ export function Login() {
           onSubmit={manejarEnvio}
           className="rounded-xl border border-piedra-200 bg-white p-6 shadow-sm"
         >
-          <Field label="Email" requerido>
+          <Field label="DNI" requerido>
             {(props) => (
               <Input
                 {...props}
-                type="email"
-                name="email"
+                type="text"
+                name="username"
                 autoComplete="username"
-                inputMode="email"
+                // Teclado numérico: el DNI son números y así se tipea más
+                // rápido y con menos errores desde el celular.
+                inputMode="numeric"
                 autoCapitalize="none"
                 autoCorrect="off"
-                value={email}
-                onChange={(evento) => setEmail(evento.target.value)}
+                placeholder="Sin puntos"
+                value={dni}
+                onChange={(evento) => setDni(evento.target.value)}
                 disabled={enviando}
               />
             )}

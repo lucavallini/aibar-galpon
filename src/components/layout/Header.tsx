@@ -21,7 +21,7 @@ const ETIQUETA_POR_ROL = {
  * mientras se trabaja.
  */
 export function Header({ titulo }: Props) {
-  const { perfil, usuario, cerrarSesion } = useAuth()
+  const { perfil, cerrarSesion } = useAuth()
   const [saliendo, setSaliendo] = useState(false)
 
   async function manejarSalir() {
@@ -41,10 +41,13 @@ export function Header({ titulo }: Props) {
     <header className="flex shrink-0 items-center justify-between gap-3 border-b border-piedra-200 bg-white px-4 py-2.5 sm:px-6">
       <div className="min-w-0">
         <h1 className="truncate text-base font-semibold text-piedra-900">{titulo}</h1>
-        <p className="truncate text-xs text-piedra-500">
-          {perfil?.nombre ?? usuario?.email}
-          {perfil !== null && ` · ${ETIQUETA_POR_ROL[perfil.rol]}`}
-        </p>
+        {/* Siempre el nombre: el «email» de la cuenta es un identificador
+            interno armado con el DNI y no significa nada para nadie. */}
+        {perfil !== null && (
+          <p className="truncate text-xs text-piedra-500">
+            {perfil.nombre} · {ETIQUETA_POR_ROL[perfil.rol]}
+          </p>
+        )}
       </div>
 
       <div className="flex shrink-0 items-center gap-2">

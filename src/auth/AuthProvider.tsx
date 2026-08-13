@@ -120,10 +120,10 @@ export function AuthProvider({ children }: Props) {
     return 'autenticado'
   }, [sesionResuelta, sesion, perfil])
 
-  const iniciarSesion = useCallback(async (email: string, password: string) => {
+  const iniciarSesion = useCallback(async (dni: string, password: string) => {
     // No hace falta setear nada: `onAuthStateChange` avisa del login y el efecto
     // del perfil se dispara solo.
-    await iniciarSesionEnSupabase(email, password)
+    await iniciarSesionEnSupabase(dni, password)
   }, [])
 
   const cerrarSesion = useCallback(async () => {

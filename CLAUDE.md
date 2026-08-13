@@ -230,6 +230,16 @@ El número se queda porque es el seguro contra una etiqueta arruinada: si el QR 
 moja y no hay ningún dato impreso, ese palet no se puede identificar ni buscar. Si cambia el
 rollo, rehacer las cuentas de `componerEtiqueta()` y verificarlas antes de imprimir.
 
+**Sobre el ingreso por DNI**: en el depósito nadie tiene correo de la empresa, así que se
+entra con el DNI. Supabase Auth solo autentica por email, de modo que el DNI se convierte en
+uno interno —`30123456@aibar.local`— con `aIdentificadorDeCuenta()` en `queries/sesion.ts`.
+Ese correo no existe, no recibe nada y **no se muestra nunca en pantalla**: donde antes iba
+el email va el nombre de la persona, y donde hace falta identificarla, el DNI. La misma
+conversión está en la Edge Function `crear-usuario`; si las dos dejan de coincidir —por
+ejemplo, si una limpia los puntos y la otra no— la cuenta creada no puede iniciar sesión,
+y por eso está cubierta por tests. La función deja pasar tal cual cualquier cosa que tenga
+`@`, así siguen entrando las cuentas creadas a mano antes del cambio.
+
 **Sobre autenticación y rutas**: el estado de sesión vive solo en `AuthProvider` y se lee
 con `useAuth()`; ningún componente llama a `supabase.auth` por su cuenta. Las rutas se
 declaran todas en `src/rutas.tsx` — no se definen rutas sueltas dentro de las pantallas — y

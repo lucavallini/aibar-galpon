@@ -40,7 +40,15 @@ const esquemaUsuario = z.object({
     .trim()
     .min(1, 'Poné el nombre de la persona.')
     .max(100, 'El nombre no puede tener más de 100 caracteres.'),
-  email: z.string().trim().email('El email no es válido.'),
+  dni: z
+    .string()
+    .trim()
+    // Se acepta escrito con puntos, pero se guarda solo con dígitos: si no, el
+    // mismo documento podría entrar dos veces escrito distinto.
+    .refine(
+      (valor) => /^\d{7,10}$/.test(valor.replace(/[.\s]/g, '')),
+      'El DNI tiene que tener entre 7 y 10 números.',
+    ),
   password: z
     .string()
     .min(8, 'La contraseña tiene que tener al menos 8 caracteres.')
@@ -73,6 +81,9 @@ function FilaUsuario({
             {usuario.nombre}
             {esUnoMismo && <span className="ml-2 text-sm text-piedra-500">(vos)</span>}
           </p>
+          {usuario.dni !== null && (
+            <p className="cifra mt-0.5 text-sm text-piedra-500">DNI {usuario.dni}</p>
+          )}
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <Badge variante={usuario.rol === 'jefe' ? 'info' : 'neutral'}>
               {usuario.rol === 'jefe' ? 'Gerencia' : 'Operario'}
@@ -130,7 +141,7 @@ export function Usuarios() {
     reset,
     formState: { errors },
   } = useForm<FormularioUsuario>({
-    defaultValues: { nombre: '', email: '', password: '', rol: 'operario' },
+    defaultValues: { nombre: '', dni: '', password: '', rol: 'operario' },
     resolver: zodResolver(esquemaUsuario),
   })
 
@@ -169,7 +180,7 @@ export function Usuarios() {
           role="status"
           className="rounded-lg border border-marca-200 bg-marca-50 px-4 py-3 text-base font-medium text-marca-900"
         >
-          «{creado}» ya puede entrar con el email y la contraseña que cargaste. Decile que
+          «{creado}» ya puede entrar con su DNI y la contraseña que cargaste. Decile que
           la cambie la primera vez.
         </p>
       )}
@@ -230,19 +241,19 @@ export function Usuarios() {
           </Field>
 
           <Field
-            label="Email"
-            error={errors.email?.message}
-            ayuda="Con este email va a iniciar sesión."
+            label="DNI"
+            error={errors.dni?.message}
+            ayuda="Con este número va a iniciar sesión."
             requerido
           >
             {(props) => (
               <Input
                 {...props}
-                {...register('email')}
-                invalido={errors.email !== undefined}
-                type="email"
-                autoCapitalize="none"
-                autoCorrect="off"
+                {...register('dni')}
+                invalido={errors.dni !== undefined}
+                type="text"
+                inputMode="numeric"
+                placeholder="Ej. 30123456"
                 autoComplete="off"
               />
             )}

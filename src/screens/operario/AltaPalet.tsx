@@ -25,9 +25,13 @@ import type { Categoria } from '@/types'
 /**
  * Alta de palet.
  *
- * El producto se elige primero porque su categoría decide qué campos
- * específicos se piden: fechas para agroquímicos, híbrido y calibre para
- * semillas.
+ * Se elige primero **el tipo de mercadería** y después el producto: es el orden
+ * en que el operario tiene la información —sabe que llegó un agroquímico antes
+ * de mirar cuál— y deja el selector con la mitad de las opciones en vez de todo
+ * el catálogo mezclado.
+ *
+ * El tipo decide además qué campos específicos se piden: fechas para
+ * agroquímicos, calibre para semillas.
  */
 export function AltaPalet() {
   const navegar = useNavigate()
@@ -43,12 +47,11 @@ export function AltaPalet() {
   const crear = useCrearPalet()
 
   /**
-   * Categoría del producto elegido, leída en el momento de validar.
+   * Tipo elegido, leído en el momento de validar.
    *
-   * Va en un ref y no como argumento directo del resolver porque el resolver se
-   * arma dentro de `useForm`, antes de que exista el `watch` que dice qué
-   * producto está elegido. El ref rompe esa circularidad: el resolver lo
-   * consulta recién cuando corre la validación, con el valor ya actualizado.
+   * Va en un ref porque el resolver se arma dentro de `useForm`, antes de que
+   * exista el `watch` que dice qué tipo está seleccionado. El ref rompe esa
+   * circularidad: el resolver lo consulta recién cuando corre la validación.
    */
   const refCategoria = useRef<Categoria | null>(null)
 
@@ -60,6 +63,7 @@ export function AltaPalet() {
     formState: { errors },
   } = useForm<FormularioPalet>({
     defaultValues: {
+      categoria: 'agroquimico',
       productoId: '',
       lote: '',
       cantidadInicial: '',
@@ -84,23 +88,26 @@ export function AltaPalet() {
   // `useWatch` y no `watch()`: este último devuelve una función que el React
   // Compiler no puede memoizar, y por eso saltea la optimización del componente
   // entero.
-  const productoIdElegido = useWatch({ control, name: 'productoId' })
+  const categoria = useWatch({ control, name: 'categoria' })
 
-  const categoria: Categoria | null = (() => {
-    const id = Number(productoIdElegido)
-    if (Number.isNaN(id) || id === 0) return null
+  /** Solo los productos del tipo elegido: media lista menos para revisar. */
+  const productosDeLaCategoria = (productos ?? []).filter(
+    (producto) => producto.categoria === categoria,
+  )
 
-    return productos?.find((producto) => producto.id === id)?.categoria ?? null
-  })()
-
-  // Al pasar a un producto de otra categoría, los campos del bloque anterior
-  // quedarían cargados pero invisibles, y se mandarían igual. Se limpian.
+  // Al cambiar de tipo, el producto elegido deja de estar en la lista y los
+  // campos del bloque anterior quedan cargados pero invisibles: se mandarían
+  // igual. Se limpia todo lo que dejó de corresponder.
   const categoriaPrevia = useRef<Categoria | null>(null)
 
   useEffect(() => {
     refCategoria.current = categoria
 
     if (categoriaPrevia.current === categoria) return
+
+    if (categoriaPrevia.current !== null) {
+      resetField('productoId')
+    }
 
     if (categoriaPrevia.current === 'agroquimico') {
       resetField('fechaElaboracion')
@@ -115,7 +122,7 @@ export function AltaPalet() {
   }, [categoria, resetField])
 
   async function guardar(valores: FormularioPalet) {
-    const palet = await crear.mutateAsync(aDatosNuevoPalet(valores, categoria))
+    const palet = await crear.mutateAsync(aDatosNuevoPalet(valores, valores.categoria))
     // `replace` para que el botón «atrás» no vuelva al formulario ya enviado.
     navegar(rutaPalet(palet.id, true), { replace: true })
   }
@@ -143,10 +150,24 @@ export function AltaPalet() {
       <h2 className="mb-5 text-xl font-semibold text-piedra-900">Nuevo palet</h2>
 
       <Form onSubmit={(evento) => void handleSubmit(guardar)(evento)}>
+        <Field
+          label="Tipo de mercadería"
+          error={errors.categoria?.message}
+          ayuda="Define qué productos se ofrecen abajo."
+          requerido
+        >
+          {(props) => (
+            <Select {...props} {...register('categoria')}>
+              <option value="agroquimico">Agroquímico</option>
+              <option value="semilla">Semilla</option>
+            </Select>
+          )}
+        </Field>
+
         <Field label="Producto" error={errors.productoId?.message} requerido>
           {(props) => (
             <Select {...props} {...register('productoId')} placeholder="Elegí un producto">
-              {productos?.map((producto) => (
+              {productosDeLaCategoria.map((producto) => (
                 <option key={producto.id} value={String(producto.id)}>
                   {producto.nombre} ({producto.unidad_medida})
                 </option>
@@ -162,8 +183,8 @@ export function AltaPalet() {
           onClick={() => navegar(RUTAS.nuevoProducto)}
           className="-mt-3 self-start"
         >
-          {productos?.length === 0
-            ? 'No hay productos cargados: agregá el primero'
+          {productosDeLaCategoria.length === 0
+            ? `No hay ${categoria === 'semilla' ? 'semillas' : 'agroquímicos'} cargados: agregá el primero`
             : '¿No está el producto? Agregalo'}
         </Button>
 

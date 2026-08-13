@@ -53,19 +53,23 @@ export async function cambiarActivo(usuarioId: string, activo: boolean): Promise
 }
 
 export interface DatosNuevoUsuario {
-  email: string
+  /** Con el que la persona va a entrar. Se acepta con puntos. */
+  dni: string
   password: string
   nombre: string
   rol: Rol
 }
 
 /**
- * Da de alta un usuario.
+ * Da de alta un usuario, identificado por su DNI.
  *
  * Pasa por una Edge Function y no por supabase-js directo porque crear cuentas
  * necesita la clave `service_role`, que abre la base entera salteando RLS: en el
  * navegador cualquiera la leería. La función corre en el servidor de Supabase,
  * valida que quien llama sea jefe, y recién ahí crea.
+ *
+ * Es también la que arma el identificador interno con forma de email a partir
+ * del DNI, así el operario nunca ve un correo en ningún lado.
  *
  * Tampoco se deja el registro abierto: sin control, cualquiera crearía cuentas
  * y llenaría la base.
@@ -75,7 +79,7 @@ export interface DatosNuevoUsuario {
 export async function crearUsuario(datos: DatosNuevoUsuario): Promise<void> {
   const { data, error } = await supabase.functions.invoke('crear-usuario', {
     body: {
-      email: datos.email.trim().toLowerCase(),
+      dni: datos.dni.trim(),
       password: datos.password,
       nombre: datos.nombre.trim(),
       rol: datos.rol,

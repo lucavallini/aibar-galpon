@@ -87,22 +87,33 @@ export async function obtenerPalet(id: number): Promise<PaletCompleto> {
 export const PALETS_POR_PAGINA = 30
 
 export interface FiltrosBusqueda {
-  /** Texto libre: número de palet, lote o nombre de producto. */
-  texto?: string
-  galpon?: Galpon
-  /** `true` deja fuera los vacíos y los dados de baja. */
-  soloConStock?: boolean
+  /** Número de palet exacto. */
+  numero?: number
+  /** Parte del lote. */
+  lote?: string
+  /** Parte del sector. */
+  sector?: string
   /**
-   * Ids de los productos cuyo nombre coincide con `texto`.
+   * Ids de los productos cuyo nombre coincide con lo buscado.
    *
-   * Se resuelven **afuera**, contra el catálogo que ya tiene en caché React
-   * Query, porque PostgREST no admite un `or` que mezcle columnas propias con
-   * columnas de una tabla embebida: `or=(lote.ilike.*x*,producto.nombre.ilike.*x*)`
-   * es un error de sintaxis. Como `producto_id` sí es columna de `palet`, con los
-   * ids ya resueltos alcanza una sola consulta, y la paginación sigue siendo del
-   * lado del servidor.
+   * Se resuelven **afuera**, contra el catálogo que ya está en caché: la
+   * categoría y el nombre viven en `producto` y PostgREST no filtra por
+   * columnas de una tabla embebida. Como `producto_id` sí es columna de
+   * `palet`, con los ids resueltos alcanza una sola consulta.
    */
   idsDeProducto?: number[]
+  galpon?: Galpon
+  /**
+   * Ids de los productos de la categoría elegida.
+   *
+   * Igual que `idsDeProducto`, se resuelven afuera: la categoría vive en
+   * `producto` y PostgREST no filtra por columnas embebidas. La diferencia es
+   * que este recorte es un **Y** —solo agroquímicos— mientras que el del texto
+   * es un **O** junto al lote y al sector.
+   */
+  idsDeCategoria?: number[]
+  /** `true` deja fuera los vacíos y los dados de baja. */
+  soloConStock?: boolean
 }
 
 export interface PaginaDePalets {
@@ -132,21 +143,33 @@ export async function buscarPalets(
     consulta = consulta.eq('galpon', filtros.galpon)
   }
 
-  const texto = filtros.texto?.trim() ?? ''
+  if (filtros.idsDeCategoria !== undefined) {
+    // Lista vacía = ningún producto de esa categoría, así que ningún palet.
+    // `in` con array vacío devuelve cero filas, que es exactamente lo correcto.
+    consulta = consulta.in('producto_id', filtros.idsDeCategoria)
+  }
 
-  if (texto !== '') {
-    const condiciones = [`lote.ilike.%${escaparParaFiltro(texto)}%`]
+  // Cada campo es un filtro independiente y se combinan con Y: buscar el lote
+  // «A» dentro del sector «Pasillo B» devuelve los que cumplen las dos cosas,
+  // que es lo que espera quien las escribió en casillas separadas.
+  if (filtros.numero !== undefined) {
+    consulta = consulta.eq('id', filtros.numero)
+  }
 
-    // Si escribió un número, puede estar buscando el palet por su id.
-    if (/^\d+$/.test(texto)) {
-      condiciones.push(`id.eq.${texto}`)
-    }
+  const lote = filtros.lote?.trim() ?? ''
 
-    if (filtros.idsDeProducto !== undefined && filtros.idsDeProducto.length > 0) {
-      condiciones.push(`producto_id.in.(${filtros.idsDeProducto.join(',')})`)
-    }
+  if (lote !== '') {
+    consulta = consulta.ilike('lote', `%${lote}%`)
+  }
 
-    consulta = consulta.or(condiciones.join(','))
+  const sector = filtros.sector?.trim() ?? ''
+
+  if (sector !== '') {
+    consulta = consulta.ilike('sector', `%${sector}%`)
+  }
+
+  if (filtros.idsDeProducto !== undefined) {
+    consulta = consulta.in('producto_id', filtros.idsDeProducto)
   }
 
   const desde = pagina * PALETS_POR_PAGINA
@@ -160,16 +183,6 @@ export async function buscarPalets(
   const palets = desempaquetarLista(respuesta, 'buscar palets')
 
   return { palets, hayMas: palets.length === PALETS_POR_PAGINA }
-}
-
-/**
- * Neutraliza los caracteres que romperían el filtro.
- *
- * Las comas y los paréntesis separan condiciones dentro de un `or` de PostgREST,
- * así que un lote que los contenga partiría la consulta al medio.
- */
-function escaparParaFiltro(texto: string): string {
-  return texto.replace(/[,()]/g, ' ')
 }
 
 /** Búsqueda por lote, parcial y sin distinguir mayúsculas. */

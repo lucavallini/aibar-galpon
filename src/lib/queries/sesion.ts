@@ -29,9 +29,9 @@ export class ErrorAutenticacion extends Error {
 /**
  * Traduce un error de Supabase Auth a algo que le sirva al operario.
  *
- * A propósito no distingue entre "el email no existe" y "la contraseña está
+ * A propósito no distingue entre "ese DNI no existe" y "la contraseña está
  * mal": Supabase ya los unifica en `invalid_credentials` para no filtrar qué
- * emails están registrados, y acá se mantiene esa decisión.
+ * cuentas están registradas, y acá se mantiene esa decisión.
  */
 function traducirErrorDeAuth(error: AuthError): ErrorAutenticacion {
   const codigo = error.code ?? null
@@ -39,7 +39,7 @@ function traducirErrorDeAuth(error: AuthError): ErrorAutenticacion {
   const mensaje = ((): string => {
     switch (codigo) {
       case 'invalid_credentials':
-        return 'Email o contraseña incorrectos.'
+        return 'DNI o contraseña incorrectos.'
       case 'email_not_confirmed':
         return 'La cuenta todavía no fue confirmada. Revisá tu correo.'
       case 'user_banned':
@@ -49,7 +49,7 @@ function traducirErrorDeAuth(error: AuthError): ErrorAutenticacion {
       case 'over_email_send_rate_limit':
         return 'Demasiados intentos seguidos. Esperá un momento y volvé a probar.'
       case 'validation_failed':
-        return 'Revisá que el email y la contraseña estén completos.'
+        return 'Revisá que el DNI y la contraseña estén completos.'
       case 'weak_password':
         return 'La contraseña es demasiado débil.'
       default:
@@ -72,13 +72,38 @@ function traducirErrorDeAuth(error: AuthError): ErrorAutenticacion {
 }
 
 /**
- * Inicia sesión con email y contraseña.
+ * Dominio interno con el que se arman los identificadores de cuenta.
+ *
+ * Supabase Auth solo autentica por email, así que el DNI se convierte en uno:
+ * `30123456@aibar.local`. Ese correo no existe ni se usa; es un identificador
+ * con forma de email, y el operario nunca lo ve. Tiene que coincidir con el de
+ * la Edge Function `crear-usuario`.
+ */
+const DOMINIO_INTERNO = 'aibar.local'
+
+/**
+ * Convierte lo que escribió la persona en el identificador de su cuenta.
+ *
+ * Acepta el DNI con puntos o espacios —así lo escribe cualquiera— y también un
+ * email completo, porque las cuentas creadas a mano antes del cambio siguen
+ * teniendo uno real y tienen que poder entrar.
+ */
+export function aIdentificadorDeCuenta(ingresado: string): string {
+  const limpio = ingresado.trim()
+
+  if (limpio.includes('@')) return limpio.toLowerCase()
+
+  return `${limpio.replace(/[.\s]/g, '')}@${DOMINIO_INTERNO}`
+}
+
+/**
+ * Inicia sesión con DNI y contraseña.
  *
  * @throws {ErrorAutenticacion} con un mensaje ya presentable en pantalla.
  */
-export async function iniciarSesion(email: string, password: string): Promise<Session> {
+export async function iniciarSesion(dni: string, password: string): Promise<Session> {
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: email.trim(),
+    email: aIdentificadorDeCuenta(dni),
     password,
   })
 

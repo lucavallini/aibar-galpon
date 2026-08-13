@@ -2,59 +2,89 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { buscarPalets, type PaginaDePalets } from '@/lib/queries/palets'
 import { claves } from '@/lib/queries/claves'
 import { useProductos } from '@/hooks/useProductos'
-import type { Galpon } from '@/types'
+import type { Categoria, Galpon } from '@/types'
 
 export interface FiltrosDeBusqueda {
-  texto: string
+  /** Número de palet. Vacío = sin filtrar por número. */
+  numero: string
+  lote: string
+  sector: string
+  /** Parte del nombre del producto. */
+  producto: string
   galpon?: Galpon
+  categoria?: Categoria
   soloConStock: boolean
 }
 
 /**
  * Listado de palets con búsqueda y paginación incremental.
  *
- * El texto busca en tres lados: número de palet, lote y nombre de producto. Los
- * dos primeros son columnas de `palet` y los resuelve la base; el tercero se
- * resuelve acá, filtrando el catálogo que ya está en caché.
+ * Cada campo filtra por su cuenta y se combinan con **Y**: quien escribe el
+ * lote en una casilla y el sector en otra espera los palets que cumplen las dos
+ * cosas, no la suma de ambas búsquedas.
  *
- * Ese rodeo tiene una razón: PostgREST no admite un `or` que mezcle columnas
- * propias con columnas de una tabla embebida. Como el catálogo es chico y ya
- * está descargado, buscar en él es instantáneo y evita una segunda consulta.
+ * El producto y la categoría viven en `producto`, no en `palet`, y PostgREST no
+ * filtra por columnas de una tabla embebida. Se resuelven contra el catálogo que
+ * ya está en caché —es chico y está descargado— y a la base se le mandan ids.
  */
 export function useBuscarPalets(filtros: FiltrosDeBusqueda) {
   const { data: productos } = useProductos()
 
-  const texto = filtros.texto.trim().toLocaleLowerCase('es')
+  const nombreBuscado = filtros.producto.trim().toLocaleLowerCase('es')
 
+  /**
+   * Ids que cumplen a la vez el nombre buscado y la categoría.
+   *
+   * Se cruzan acá y no en la base porque los dos criterios apuntan a la misma
+   * columna de `palet` (`producto_id`): mandar dos `in` separados dejaría que el
+   * segundo pise al primero.
+   */
   const idsDeProducto =
-    texto === ''
-      ? []
+    nombreBuscado === '' && filtros.categoria === undefined
+      ? undefined
       : (productos ?? [])
-          .filter((producto) =>
-            producto.nombre.toLocaleLowerCase('es').includes(texto),
-          )
+          .filter((producto) => {
+            const coincideNombre =
+              nombreBuscado === '' ||
+              producto.nombre.toLocaleLowerCase('es').includes(nombreBuscado)
+
+            const coincideCategoria =
+              filtros.categoria === undefined || producto.categoria === filtros.categoria
+
+            return coincideNombre && coincideCategoria
+          })
           .map((producto) => producto.id)
+
+  const numero = /^\d+$/.test(filtros.numero.trim())
+    ? Number(filtros.numero.trim())
+    : undefined
 
   return useInfiniteQuery<PaginaDePalets>({
     queryKey: claves.palets.busqueda({
-      texto: filtros.texto.trim(),
+      numero: filtros.numero.trim(),
+      lote: filtros.lote.trim(),
+      sector: filtros.sector.trim(),
+      producto: filtros.producto.trim(),
       galpon: filtros.galpon,
+      categoria: filtros.categoria,
       soloConStock: filtros.soloConStock,
     }),
     queryFn: ({ pageParam }) =>
       buscarPalets(
         {
-          texto: filtros.texto,
+          numero,
+          lote: filtros.lote,
+          sector: filtros.sector,
+          idsDeProducto,
           galpon: filtros.galpon,
           soloConStock: filtros.soloConStock,
-          idsDeProducto,
         },
         pageParam as number,
       ),
     initialPageParam: 0,
     getNextPageParam: (ultima, todas) => (ultima.hayMas ? todas.length : undefined),
-    // El catálogo tiene que estar cargado para poder buscar por producto; sin
-    // él, esa parte de la búsqueda quedaría muda sin avisar.
+    // El catálogo tiene que estar cargado para poder filtrar por producto o
+    // categoría; sin él, esa parte de la búsqueda quedaría muda sin avisar.
     enabled: productos !== undefined,
   })
 }

@@ -15,6 +15,7 @@ import {
  */
 
 const VALIDO: FormularioPalet = {
+  categoria: 'agroquimico',
   productoId: '1',
   lote: 'L-2026-0113',
   cantidadInicial: '120',
@@ -33,6 +34,9 @@ const VALIDO: FormularioPalet = {
 function validar(valores: Partial<FormularioPalet>, categoria: 'agroquimico' | 'semilla' | null) {
   const resultado = esquemaPaletSegunCategoria(categoria).safeParse({
     ...VALIDO,
+    // El tipo elegido en el formulario y el que valida son el mismo: el
+    // selector de producto solo ofrece los de esa categoría.
+    categoria: categoria ?? 'agroquimico',
     ...valores,
   })
 
@@ -83,6 +87,17 @@ describe('campos obligatorios', () => {
     expect(validar({ lote: 'x'.repeat(51) }, 'agroquimico')).not.toBeNull()
     expect(validar({ sector: 'x'.repeat(51) }, 'agroquimico')).not.toBeNull()
     expect(validar({ observacion: 'x'.repeat(501) }, 'agroquimico')).not.toBeNull()
+  })
+})
+
+describe('el tipo recorta el catálogo', () => {
+  it('es obligatorio elegirlo', () => {
+    const resultado = esquemaPaletSegunCategoria('agroquimico').safeParse({
+      ...VALIDO,
+      categoria: undefined,
+    })
+
+    expect(resultado.success).toBe(false)
   })
 })
 

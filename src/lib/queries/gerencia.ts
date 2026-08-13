@@ -53,6 +53,8 @@ export interface FiltrosGerencia {
   clienteId?: number | 'propia'
   /** Búsqueda por lote. */
   lote?: string
+  /** Búsqueda por sector dentro del galpón. */
+  sector?: string
 }
 
 /**
@@ -165,6 +167,12 @@ export async function listarPaletsGerencia(
 
   if (lote !== '') {
     consulta = consulta.ilike('lote', `%${lote}%`)
+  }
+
+  const sector = filtros.sector?.trim() ?? ''
+
+  if (sector !== '') {
+    consulta = consulta.ilike('sector', `%${sector}%`)
   }
 
   // El orden depende de la pregunta: si se está mirando qué vence, lo urgente

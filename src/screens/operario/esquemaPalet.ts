@@ -12,7 +12,7 @@ import type { Categoria } from '@/types'
  * categoría: React Hook Form trabaja mucho mejor con un tipo de formulario
  * estable, donde los campos no aparecen y desaparecen del tipo según la rama.
  * Los campos específicos son opcionales, y las reglas condicionales se agregan
- * abajo según la categoría del producto elegido.
+ * abajo según el tipo de mercadería elegido.
  *
  * Todos los campos son `string` porque vienen de inputs. La conversión a número
  * y a `null` la hace `aDatosNuevoPalet()`.
@@ -46,6 +46,18 @@ const fechaOpcional = z
   .or(z.literal(''))
 
 export const esquemaPalet = z.object({
+  /**
+   * Se elige antes que el producto y recorta la lista a los de su tipo.
+   *
+   * Antes se derivaba del producto ya elegido, pero eso obligaba al operario a
+   * buscar entre todo el catálogo mezclado. Ahora contesta primero «¿qué llegó,
+   * agroquímico o semilla?», que es lo que sabe de entrada, y el selector queda
+   * con la mitad de las opciones.
+   */
+  categoria: z.enum(['agroquimico', 'semilla'], {
+    message: 'Elegí si es agroquímico o semilla.',
+  }),
+
   productoId: z
     .string()
     .min(1, 'Elegí un producto.'),
@@ -100,10 +112,11 @@ export const esquemaPalet = z.object({
 export type FormularioPalet = z.infer<typeof esquemaPalet>
 
 /**
- * Agrega las reglas que dependen de la categoría del producto elegido.
+ * Agrega las reglas que dependen del tipo de mercadería.
  *
- * La categoría no es un campo del formulario —se deriva del producto—, así que
- * se pasa por el `context` del resolver en el momento de validar.
+ * Se pasa por fuera del esquema aunque `categoria` sea un campo del formulario:
+ * el resolver se arma dentro de `useForm`, antes de que exista el `watch` que
+ * dice qué tipo está elegido, así que la pantalla lo alimenta con un ref.
  */
 export function esquemaPaletSegunCategoria(categoria: Categoria | null) {
   return esquemaPalet.superRefine((valores, contexto) => {
