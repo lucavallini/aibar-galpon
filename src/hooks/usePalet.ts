@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { obtenerPalet } from '@/lib/queries/palets'
+import { listarPaletsPorIds, obtenerPalet } from '@/lib/queries/palets'
 import { claves } from '@/lib/queries/claves'
 
 /**
@@ -14,5 +14,19 @@ export function usePalet(id: number | null) {
     queryKey: claves.palets.detalle(id ?? 0),
     queryFn: () => obtenerPalet(id as number),
     enabled: id !== null,
+  })
+}
+
+/**
+ * Varios palets a la vez, para la pantalla de un lote recién creado.
+ *
+ * Una sola consulta y no una por palet: son hasta cincuenta, y cincuenta viajes
+ * para dibujar una lista dejarían la pantalla cargando a pedazos.
+ */
+export function usePaletsPorIds(ids: number[]) {
+  return useQuery({
+    queryKey: claves.palets.porIds(ids),
+    queryFn: () => listarPaletsPorIds(ids),
+    enabled: ids.length > 0,
   })
 }

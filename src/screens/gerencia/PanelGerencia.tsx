@@ -10,7 +10,12 @@ import {
 import { useProductos } from '@/hooks/useProductos'
 import { useValorDemorado } from '@/hooks/useValorDemorado'
 import { useClientes } from '@/hooks/useClientes'
-import { DIAS_INMOVILIZADO, type PreguntaDeNegocio } from '@/lib/queries/gerencia'
+import {
+  DIAS_INMOVILIZADO,
+  DIAS_VENCIMIENTO_PROXIMO,
+  type PreguntaDeNegocio,
+} from '@/lib/queries/gerencia'
+import { formatearAnticipacion } from '@/lib/vencimiento'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -38,13 +43,14 @@ const PREGUNTAS: Record<PreguntaDeNegocio, { titulo: string; explica: string }> 
     titulo: 'Ya vencidos',
     explica: 'Agroquímicos con stock cuya fecha de vencimiento ya pasó. No se pueden vender.',
   },
-  'vence-30': {
-    titulo: 'Vencen en 30 días',
-    explica: 'Hay que colocarlos ya.',
-  },
   'vence-90': {
     titulo: 'Vencen en 90 días',
-    explica: 'Para tener en cuenta en la planificación.',
+    explica: 'Hay que colocarlos ya.',
+  },
+  'vence-6-meses': {
+    titulo: 'Vencen en 6 meses',
+    explica:
+      'Con stock y vencimiento dentro de los próximos 6 meses. Colocar un producto lleva meses: este es el aviso con el que todavía se puede hacer algo.',
   },
   'sin-movimiento': {
     titulo: 'Sin movimiento',
@@ -147,7 +153,7 @@ function FilaPalet({ palet, onAbrir }: { palet: PaletGerencia; onAbrir: () => vo
   const porVencer =
     palet.dias_para_vencer !== null &&
     palet.dias_para_vencer >= 0 &&
-    palet.dias_para_vencer <= 30
+    palet.dias_para_vencer <= DIAS_VENCIMIENTO_PROXIMO
 
   return (
     <Card comoBoton onClick={onAbrir}>
@@ -165,16 +171,24 @@ function FilaPalet({ palet, onAbrir }: { palet: PaletGerencia; onAbrir: () => vo
           </p>
           {palet.cliente_nombre !== null && (
             <p className="mt-0.5 truncate text-sm font-medium text-piedra-600">
-              Cliente: {palet.cliente_nombre}
+              Empresa: {palet.cliente_nombre}
             </p>
           )}
 
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <EstadoPaletBadge estado={palet.estado} />
 
+            {/* Se deduce de que no tenga sector: aparece y desaparece solo,
+                sin escribir ni borrar nada en la bitácora. */}
+            {palet.sector_id === null && palet.estado !== 'baja' && (
+              <Badge variante="advertencia">Sin ubicar</Badge>
+            )}
+
             {vencido && <Badge variante="peligro">Vencido</Badge>}
             {porVencer && (
-              <Badge variante="advertencia">Vence en {palet.dias_para_vencer} d</Badge>
+              <Badge variante="advertencia">
+                Vence en {formatearAnticipacion(palet.dias_para_vencer ?? 0)}
+              </Badge>
             )}
             {palet.dias_sin_movimiento >= DIAS_INMOVILIZADO && (
               <Badge variante="neutral">Quieto {palet.dias_sin_movimiento} d</Badge>
@@ -204,7 +218,7 @@ function FilaPalet({ palet, onAbrir }: { palet: PaletGerencia; onAbrir: () => vo
             {palet.cantidad_disponible}
           </p>
           <p className="cifra mt-0.5 text-xs text-piedra-500">
-            de {palet.cantidad_inicial} {palet.producto_unidad_medida}
+            de {palet.cantidad_inicial} {palet.unidad_medida}
           </p>
         </div>
       </div>
@@ -272,7 +286,8 @@ export function PanelGerencia() {
               tono={
                 alerta.pregunta === 'vencidos'
                   ? 'peligro'
-                  : alerta.pregunta === 'vence-30' || alerta.pregunta === 'con-novedades'
+                  : alerta.pregunta === 'vence-6-meses' ||
+                      alerta.pregunta === 'con-novedades'
                     ? 'advertencia'
                     : 'neutral'
               }
@@ -326,7 +341,10 @@ export function PanelGerencia() {
                     ?.filter((fila) => fila.palets_con_stock > 0)
                     .map((fila) => (
                       <tr
-                        key={fila.producto_id}
+                        // Una fila por producto **y unidad**: el mismo maíz
+                        // puede tener 120 bolsas y 400 kilos a granel, y son dos
+                        // líneas distintas porque sumarlas daría 520 de nada.
+                        key={`${fila.producto_id}-${fila.unidad_medida}`}
                         className="border-b border-piedra-100 last:border-b-0"
                       >
                         <td className="p-3">
@@ -342,7 +360,7 @@ export function PanelGerencia() {
                         <td className="cifra p-3 text-right font-semibold text-piedra-900">
                           {fila.total_disponible}{' '}
                           <span className="font-normal text-piedra-500">
-                            {fila.producto_unidad_medida}
+                            {fila.unidad_medida}
                           </span>
                         </td>
                         <td className="cifra p-3 text-right text-piedra-600">
@@ -443,7 +461,7 @@ export function PanelGerencia() {
               htmlFor="filtro-cliente"
               className="mb-1 block text-sm font-medium text-piedra-700"
             >
-              Cliente
+              Empresa
             </label>
             <Select
               id="filtro-cliente"

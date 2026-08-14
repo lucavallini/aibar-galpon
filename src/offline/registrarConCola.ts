@@ -15,9 +15,13 @@ export interface DatosMovimientoConCola {
   paletId: number
   tipo: TipoMovimientoRegistrable
   cantidad: number
+  /** Quién se lleva la mercadería. */
+  transportistaId?: number | null
   /** Para poder identificar el movimiento en la cola sin consultar la base. */
   paletEtiqueta: string
   unidad: string
+  /** El nombre del chofer, copiado por la misma razón que la etiqueta. */
+  transportistaNombre?: string | null
 }
 
 export type ResultadoRegistro =
@@ -49,6 +53,7 @@ export async function registrarOEncolar(
       paletId: datos.paletId,
       tipo: datos.tipo,
       cantidad: datos.cantidad,
+      transportistaId: datos.transportistaId,
     })
 
     return { destino: 'base', movimiento }

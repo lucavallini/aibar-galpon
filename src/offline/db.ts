@@ -25,6 +25,14 @@ export interface MovimientoPendiente {
   paletId: number
   tipo: TipoMovimientoRegistrable
   cantidad: number
+  /**
+   * Quién se llevó la mercadería. Viaja en la cola como todo lo demás: si no
+   * estuviera, el movimiento se sincronizaría horas después sin el chofer y
+   * nadie se enteraría de que ese dato se perdió.
+   */
+  transportistaId?: number | null
+  /** El nombre, copiado al encolar, para poder mostrarlo sin consultar. */
+  transportistaNombre?: string | null
 
   /**
    * Datos del palet copiados al encolar.

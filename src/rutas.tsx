@@ -10,6 +10,7 @@ import { AbrirPalet } from '@/screens/AbrirPalet'
 import { CatalogoUI } from '@/screens/CatalogoUI'
 import { InicioOperario } from '@/screens/operario/InicioOperario'
 import { AltaPalet } from '@/screens/operario/AltaPalet'
+import { LoteCreado } from '@/screens/operario/LoteCreado'
 import { AltaProducto } from '@/screens/operario/AltaProducto'
 import { AltaCliente } from '@/screens/operario/AltaCliente'
 import { EscanearQR } from '@/screens/operario/EscanearQR'
@@ -41,6 +42,8 @@ export const RUTAS = {
   operario: '/deposito',
   buscarPalets: '/deposito/palets',
   nuevoPalet: '/deposito/nuevo',
+  /** Los palets recién creados de un lote. Para navegar, usar `rutaLote(ids)`. */
+  lote: '/deposito/lote',
   nuevoProducto: '/deposito/productos/nuevo',
   nuevoCliente: '/deposito/clientes/nuevo',
   escanear: '/escanear',
@@ -75,6 +78,17 @@ export function rutaPalet(id: number, reciénCreado = false): string {
   return `/palet/${id}${reciénCreado ? '?creado=1' : ''}`
 }
 
+/**
+ * Pantalla con los palets de un lote recién creado, para imprimir sus QR.
+ *
+ * Los ids van en la dirección y no en el estado de la navegación para que
+ * recargar la página —algo que pasa solo si el celular se bloquea a mitad de la
+ * impresión— no deje al operario sin la lista de lo que acaba de crear.
+ */
+export function rutaLote(ids: number[]): string {
+  return `/deposito/lote?palets=${ids.join(',')}`
+}
+
 /** Navegación del operario. Cada fase que agrega una pantalla suma su ítem acá. */
 /** Navegación de gerencia. El panel es de consulta salvo la gestión de usuarios. */
 const NAV_GERENCIA: ItemNav[] = [
@@ -87,6 +101,10 @@ const NAV_OPERARIO: ItemNav[] = [
   { a: RUTAS.escanear, etiqueta: 'Escanear', icono: 'escanear' },
   { a: RUTAS.buscarPalets, etiqueta: 'Palets', icono: 'buscar' },
   { a: RUTAS.nuevoPalet, etiqueta: 'Nuevo palet', icono: 'palet' },
+  // Va al lado del alta de palet porque es donde se descubre que falta: llegó
+  // mercadería de algo que nunca se cargó. Antes el acceso estaba metido dentro
+  // del formulario, y salir a cargar el producto costaba perder lo tipeado.
+  { a: RUTAS.nuevoProducto, etiqueta: 'Producto', icono: 'producto' },
 ]
 
 /**
@@ -148,6 +166,7 @@ export function Rutas() {
         <Route path={RUTAS.buscarPalets} element={<BuscarPalets />} />
         <Route path={RUTAS.pendientes} element={<Pendientes />} />
         <Route path={RUTAS.nuevoPalet} element={<AltaPalet />} />
+        <Route path={RUTAS.lote} element={<LoteCreado />} />
         <Route path={RUTAS.nuevoProducto} element={<AltaProducto />} />
         <Route path={RUTAS.nuevoCliente} element={<AltaCliente />} />
         <Route path={RUTAS.palet} element={<DetallePalet />} />

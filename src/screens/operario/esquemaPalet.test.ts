@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  aDatosNuevoLote,
   aDatosNuevoPalet,
   esquemaPaletSegunCategoria,
+  esUnSoloPalet,
   hoyISO,
+  repartirEntrePalets,
   type FormularioPalet,
 } from '@/screens/operario/esquemaPalet'
 
@@ -19,8 +22,12 @@ const VALIDO: FormularioPalet = {
   productoId: '1',
   lote: 'L-2026-0113',
   cantidadInicial: '120',
+  unidadMedida: 'bidón',
+  // Un palet solo: el reparto en lote tiene sus propios casos más abajo.
+  cantidadPalets: '1',
   galpon: '1',
-  sector: '',
+  // Obligatorio desde que un sector admite un solo palet a la vez.
+  sectorId: '7',
   fechaIngreso: '2026-08-12',
   fechaElaboracion: '',
   fechaVencimiento: '2027-01-01',
@@ -30,12 +37,22 @@ const VALIDO: FormularioPalet = {
   observacion: '',
 }
 
+/**
+ * Una semilla como llega del formulario: el producto es el cultivo y el híbrido
+ * dice qué variedad vino en esta partida.
+ */
+const SEMILLA: Partial<FormularioPalet> = {
+  hibrido: 'DK 7210',
+  unidadMedida: 'bolsa',
+}
+
 /** Ejecuta la validación y devuelve los mensajes por campo. */
 function validar(valores: Partial<FormularioPalet>, categoria: 'agroquimico' | 'semilla' | null) {
   const resultado = esquemaPaletSegunCategoria(categoria).safeParse({
     ...VALIDO,
+    ...(categoria === 'semilla' ? SEMILLA : {}),
     // El tipo elegido en el formulario y el que valida son el mismo: el
-    // selector de producto solo ofrece los de esa categoría.
+    // formulario cambia de campos según el tipo.
     categoria: categoria ?? 'agroquimico',
     ...valores,
   })
@@ -85,7 +102,6 @@ describe('campos obligatorios', () => {
 
   it('respeta el largo de las columnas', () => {
     expect(validar({ lote: 'x'.repeat(51) }, 'agroquimico')).not.toBeNull()
-    expect(validar({ sector: 'x'.repeat(51) }, 'agroquimico')).not.toBeNull()
     expect(validar({ observacion: 'x'.repeat(501) }, 'agroquimico')).not.toBeNull()
   })
 })
@@ -114,6 +130,35 @@ describe('reglas por categoría', () => {
     expect(validar({ fechaVencimiento: '' }, 'semilla')).toBeNull()
   })
 
+  it('exige el híbrido en semillas', () => {
+    // Es lo que identifica a la variedad y con lo que la base resuelve o crea
+    // el producto: sin híbrido el palet no tiene a qué asociarse.
+    const errores = validar({ hibrido: '' }, 'semilla')
+
+    expect(errores?.some((e) => e.campo === 'hibrido')).toBe(true)
+  })
+
+  it('pide el producto en las dos categorías', () => {
+    // Es lo que dice qué cosa es: un agroquímico del catálogo, o el cultivo de
+    // la semilla. Sin él el palet no se puede sumar a ningún stock.
+    for (const categoria of ['agroquimico', 'semilla'] as const) {
+      const errores = validar({ productoId: '' }, categoria)
+
+      expect(errores?.some((e) => e.campo === 'productoId')).toBe(true)
+    }
+  })
+
+  it('rechaza una unidad que no está en la lista', () => {
+    // Texto libre traía «kg», «Kg» y «kilos» conviviendo como tres unidades
+    // distintas, y el stock de un producto quedaba partido en tres líneas.
+    const resultado = esquemaPaletSegunCategoria('agroquimico').safeParse({
+      ...VALIDO,
+      unidadMedida: 'kg',
+    })
+
+    expect(resultado.success).toBe(false)
+  })
+
   it('rechaza un vencimiento anterior a la elaboración', () => {
     // Espeja el CHECK del schema, para avisar antes de mandar.
     const errores = validar(
@@ -136,10 +181,10 @@ describe('reglas por categoría', () => {
 
 describe('traducción a lo que espera la base', () => {
   it('convierte los vacíos en null, no en cadenas vacías', () => {
-    // La base distingue: '' pasaría el NOT NULL de sector y guardaría basura.
-    const datos = aDatosNuevoPalet({ ...VALIDO, sector: '   ' }, 'agroquimico')
+    // La base distingue: '' se guardaría como una observación en blanco.
+    const datos = aDatosNuevoPalet({ ...VALIDO, observacion: '   ' }, 'agroquimico')
 
-    expect(datos.sector).toBeNull()
+    expect(datos.observacion).toBeNull()
   })
 
   it('manda null en los campos de la otra categoría', () => {
@@ -153,6 +198,19 @@ describe('traducción a lo que espera la base', () => {
     expect(datos.hibrido).toBeNull()
     expect(datos.calibre).toBeNull()
     expect(datos.fechaVencimiento).toBe('2027-01-01')
+  })
+
+  it('manda el producto elegido en las dos categorías', () => {
+    expect(aDatosNuevoPalet(VALIDO, 'agroquimico').productoId).toBe(1)
+    expect(aDatosNuevoPalet(VALIDO, 'semilla').productoId).toBe(1)
+  })
+
+  it('manda la unidad elegida, que es del palet y no del producto', () => {
+    // Dos partidas del mismo producto pueden venir en unidades distintas: una
+    // en bolsas y otra a granel en kilos.
+    const datos = aDatosNuevoPalet({ ...VALIDO, unidadMedida: 'kilo' }, 'semilla')
+
+    expect(datos.unidadMedida).toBe('kilo')
   })
 
   it('descarta las fechas de agroquímico si el producto es semilla', () => {
@@ -173,10 +231,10 @@ describe('traducción a lo que espera la base', () => {
     expect(aDatosNuevoPalet({ ...VALIDO, clienteId: '7' }, 'semilla').clienteId).toBe(7)
   })
 
-  it('convierte el galpón a número', () => {
-    const datos = aDatosNuevoPalet({ ...VALIDO, galpon: '3' }, 'semilla')
+  it('convierte la cantidad a número', () => {
+    const datos = aDatosNuevoPalet({ ...VALIDO, cantidadInicial: '10,5' }, 'semilla')
 
-    expect(datos.galpon).toBe(3)
+    expect(datos.cantidadInicial).toBe(10.5)
   })
 })
 
@@ -188,5 +246,131 @@ describe('hoyISO', () => {
     const esperado = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
 
     expect(hoyISO()).toBe(esperado)
+  })
+})
+
+describe('sector', () => {
+  it('es obligatorio: sin él, la regla de un palet por lugar no se puede aplicar', () => {
+    expect(validar({ sectorId: '' }, 'agroquimico')).toContainEqual({
+      campo: 'sectorId',
+      mensaje: 'Elegí en qué sector queda el palet.',
+    })
+  })
+
+  it('lo convierte al id que espera la base', () => {
+    // Llega del `<select>` como string y la RPC lo quiere numérico.
+    const datos = aDatosNuevoPalet({ ...VALIDO, sectorId: '12' }, 'agroquimico')
+
+    expect(datos.sectorId).toBe(12)
+  })
+})
+
+describe('reparto de un lote entre sus palets', () => {
+  it('divide parejo cuando da exacto', () => {
+    expect(repartirEntrePalets(10_000, 10)).toEqual({
+      porPalet: 1000,
+      ultimo: 1000,
+      cantidadPalets: 10,
+    })
+  })
+
+  it('le da el resto al último, para que la suma cierre', () => {
+    // 33,33 × 3 = 99,99: sin el resto se evaporaría un centavo del stock.
+    const reparto = repartirEntrePalets(100, 3)
+
+    expect(reparto).toEqual({ porPalet: 33.33, ultimo: 33.34, cantidadPalets: 3 })
+    expect(reparto!.porPalet * 2 + reparto!.ultimo).toBeCloseTo(100, 2)
+  })
+
+  it('nunca se pasa de dos decimales, que es lo que aguanta la columna', () => {
+    const reparto = repartirEntrePalets(10, 3)
+
+    expect(reparto!.porPalet).toBe(3.33)
+    // Trunca en vez de redondear: 3,34 × 3 daría más de lo que entró.
+    expect(reparto!.ultimo).toBe(3.34)
+  })
+
+  it('mantiene la suma exacta también con decimales incómodos', () => {
+    const reparto = repartirEntrePalets(0.3, 3)
+
+    expect(reparto!.porPalet * 2 + reparto!.ultimo).toBeCloseTo(0.3, 2)
+  })
+
+  it('no calcula nada si los datos todavía no sirven', () => {
+    expect(repartirEntrePalets(Number.NaN, 3)).toBeNull()
+    expect(repartirEntrePalets(0, 3)).toBeNull()
+    expect(repartirEntrePalets(-100, 3)).toBeNull()
+    expect(repartirEntrePalets(100, 0)).toBeNull()
+    expect(repartirEntrePalets(100, 1.5)).toBeNull()
+  })
+})
+
+describe('cuándo es un lote y cuándo un palet solo', () => {
+  it('uno, vacío o inválido es un palet solo', () => {
+    expect(esUnSoloPalet('1')).toBe(true)
+    expect(esUnSoloPalet('')).toBe(true)
+    expect(esUnSoloPalet(undefined)).toBe(true)
+    expect(esUnSoloPalet('dos')).toBe(true)
+  })
+
+  it('más de uno es un lote', () => {
+    expect(esUnSoloPalet('2')).toBe(false)
+    expect(esUnSoloPalet('10')).toBe(false)
+  })
+})
+
+describe('validación del lote', () => {
+  it('no exige sector: los palets del lote nacen sin ubicar', () => {
+    // Elegir diez lugares antes de tener los palets delante obliga a decidirlos
+    // de memoria; se ubican al descargarlos.
+    expect(validar({ cantidadPalets: '10', sectorId: '' }, 'agroquimico')).toBeNull()
+  })
+
+  it('sí lo exige cuando es un palet solo', () => {
+    const errores = validar({ cantidadPalets: '1', sectorId: '' }, 'agroquimico')
+
+    expect(errores?.some((e) => e.campo === 'sectorId')).toBe(true)
+  })
+
+  it('rechaza más palets que el tope', () => {
+    expect(validar({ cantidadPalets: '51' }, 'agroquimico')).not.toBeNull()
+    expect(validar({ cantidadPalets: '50', sectorId: '' }, 'agroquimico')).toBeNull()
+  })
+
+  it('rechaza cero, negativos y decimales', () => {
+    expect(validar({ cantidadPalets: '0' }, 'agroquimico')).not.toBeNull()
+    expect(validar({ cantidadPalets: '-3' }, 'agroquimico')).not.toBeNull()
+    expect(validar({ cantidadPalets: '2,5' }, 'agroquimico')).not.toBeNull()
+  })
+
+  it('avisa si el total no alcanza para tantos palets', () => {
+    // 10 en 3000 le tocaría menos de un centavo a cada uno, y la base lo
+    // rechaza: mejor decirlo antes de mandar el formulario entero.
+    const errores = validar(
+      { cantidadPalets: '3000', cantidadInicial: '10', sectorId: '' },
+      'agroquimico',
+    )
+
+    expect(errores).not.toBeNull()
+  })
+})
+
+describe('traducción del lote a lo que espera la base', () => {
+  it('manda el total y en cuántos palets se reparte, con el galpón', () => {
+    const datos = aDatosNuevoLote(
+      { ...VALIDO, cantidadPalets: '10', cantidadInicial: '10000', galpon: '2' },
+      'agroquimico',
+    )
+
+    // El total viaja entero: el reparto lo hace la base, que es la que manda.
+    expect(datos.cantidadInicial).toBe(10_000)
+    expect(datos.cantidadPalets).toBe(10)
+    expect(datos.galpon).toBe(2)
+  })
+
+  it('no manda sector: en el lote no existe', () => {
+    const datos = aDatosNuevoLote({ ...VALIDO, cantidadPalets: '10' }, 'agroquimico')
+
+    expect('sectorId' in datos).toBe(false)
   })
 })

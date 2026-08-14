@@ -45,13 +45,27 @@ export async function obtenerProducto(id: number): Promise<Producto> {
 export interface DatosNuevoProducto {
   nombre: string
   categoria: Categoria
-  unidadMedida: string
+  /**
+   * Cómo suele venir el producto. Opcional y solo informativa: la unidad con la
+   * que se cuenta el stock la elige cada palet, porque dos partidas de lo mismo
+   * pueden venir en unidades distintas.
+   */
+  unidadMedida?: string | null
   /** Bayer, Syngenta, Nidera… */
   marca?: string | null
   /** Glifosato, atrazina. Solo tiene sentido en agroquímicos. */
   principioActivo?: string | null
   /** 48%, 50 g/l. */
   concentracion?: string | null
+  /** Maíz, soja, girasol. Solo tiene sentido en semillas. */
+  especie?: string | null
+  /**
+   * La variedad que define al producto: DK 7210.
+   *
+   * No se pisa con el híbrido del palet: aquel es el que vino en esa partida,
+   * que puede diferir si el proveedor mandó otra con el mismo nombre.
+   */
+  hibrido?: string | null
 }
 
 /** Vacío o solo espacios se guarda como `null`, no como cadena vacía. */
@@ -73,10 +87,12 @@ export async function crearProducto(datos: DatosNuevoProducto): Promise<Producto
   const nuevo: ProductoInsert = {
     nombre: datos.nombre.trim(),
     categoria: datos.categoria,
-    unidad_medida: datos.unidadMedida.trim(),
+    unidad_medida: aTextoONulo(datos.unidadMedida),
     marca: aTextoONulo(datos.marca),
     principio_activo: aTextoONulo(datos.principioActivo),
     concentracion: aTextoONulo(datos.concentracion),
+    especie: aTextoONulo(datos.especie),
+    hibrido: aTextoONulo(datos.hibrido),
   }
 
   const respuesta = await supabase.from('producto').insert(nuevo).select().single()

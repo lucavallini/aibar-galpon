@@ -4,8 +4,25 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { cx } from '@/lib/cx'
 import type { MovimientoConAutor, TipoMovimiento } from '@/types'
 
+/**
+ * El alta del palet, para abrir el historial con ella.
+ *
+ * No es una fila de `movimiento`: el alta no genera ninguna, porque la cantidad
+ * inicial la fija el trigger `inicializar_palet()` y no un movimiento de stock.
+ * Se arma acá, en la presentación, y por eso no lleva id ni se puede corregir.
+ * Sin ella el historial empieza contando salidas de un total que no aparece por
+ * ningún lado, y no cierra: «−20» sobre nada.
+ */
+export interface AltaDelPalet {
+  /** `YYYY-MM-DD`: la fecha de ingreso que cargó el operario. */
+  fecha: string
+  cantidad: number
+}
+
 interface Props {
   movimientos: MovimientoConAutor[]
+  /** El ingreso original. Va al final: es lo más viejo del historial. */
+  alta?: AltaDelPalet
   /** Id del usuario que está mirando, para marcar sus propios movimientos. */
   usuarioActualId?: string | null
   unidad: string
@@ -48,8 +65,36 @@ function formatearFechaHora(iso: string): string {
   })
 }
 
+/** `12/08/2026` a partir de un `YYYY-MM-DD`, sin pasar por `Date`. */
+function formatearFecha(iso: string): string {
+  const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+
+  // `new Date('2026-08-12')` se interpreta en UTC y en Argentina muestra el día
+  // anterior. Con la fecha ya partida en tres, eso no puede pasar.
+  return partes === null ? iso : `${partes[3]}/${partes[2]}/${partes[1]}`
+}
+
+/** El ingreso original, cerrando el historial por abajo. */
+function FilaDeAlta({ alta, unidad }: { alta: AltaDelPalet; unidad: string }) {
+  return (
+    <li className="border-t border-piedra-200 py-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variante="exito">Alta del palet</Badge>
+        <span className="text-base font-semibold text-piedra-900">
+          +{alta.cantidad} {unidad}
+        </span>
+      </div>
+
+      <p className="mt-1 text-sm text-piedra-500">
+        {formatearFecha(alta.fecha)} · ingreso al depósito
+      </p>
+    </li>
+  )
+}
+
 export function HistorialMovimientos({
   movimientos,
+  alta,
   usuarioActualId,
   unidad,
   idCorregible = null,
@@ -57,10 +102,20 @@ export function HistorialMovimientos({
 }: Props) {
   if (movimientos.length === 0) {
     return (
-      <EmptyState
-        titulo="Sin movimientos"
-        descripcion="Este palet todavía está entero: no se registró ninguna salida."
-      />
+      <>
+        <EmptyState
+          titulo="Sin movimientos"
+          descripcion="Este palet todavía está entero: no se registró ninguna salida."
+        />
+
+        {/* Aun sin salidas se muestra el alta: es el punto de partida del
+            stock, y verlo confirma con cuánto entró el palet. */}
+        {alta !== undefined && (
+          <ol className="mt-2 flex flex-col">
+            <FilaDeAlta alta={alta} unidad={unidad} />
+          </ol>
+        )}
+      </>
     )
   }
 
@@ -118,6 +173,13 @@ export function HistorialMovimientos({
               {esPropio ? 'Vos' : (movimiento.usuario?.nombre ?? 'Usuario no disponible')}
             </p>
 
+            {/* En un ajuste no hay chofer: no hubo ningún camión. */}
+            {movimiento.transportista !== null && (
+              <p className="mt-1 text-sm text-piedra-600">
+                Se la llevó {movimiento.transportista.nombre}
+              </p>
+            )}
+
             {movimiento.corrige_a !== null && (
               <p className="mt-1 text-sm font-medium text-marca-800">
                 Deshace el movimiento #{movimiento.corrige_a}
@@ -140,6 +202,10 @@ export function HistorialMovimientos({
           </li>
         )
       })}
+
+      {/* Último de la lista porque el historial va del más reciente al más
+          viejo, y el alta es lo primero que le pasó al palet. */}
+      {alta !== undefined && <FilaDeAlta alta={alta} unidad={unidad} />}
     </ol>
   )
 }

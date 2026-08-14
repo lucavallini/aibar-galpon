@@ -17,46 +17,34 @@ import { RUTAS } from '@/rutas'
 /**
  * Alta de producto.
  *
- * El catálogo lo carga el propio operario: hasta ahora había que entrar al panel
- * de Supabase para agregar un producto nuevo, y eso frenaba el alta de un palet
- * cuando llegaba mercadería de algo que todavía no estaba cargado.
+ * Un producto es **qué cosa es**, y nada más. Una semilla es un nombre —Soja,
+ * Maíz—; un agroquímico es un nombre y su concentración, que es lo que separa
+ * dos frascos que dicen lo mismo en la etiqueta.
  *
- * Es un formulario de tres campos y nada más. Un producto es «qué cosa es»
- * —Glifosato 48%—; lo que cambia entre partidas (lote, vencimiento, cantidad)
- * va en el palet, no acá.
+ * Todo lo demás cambia de partida en partida y por eso vive en el palet: el
+ * lote, el híbrido, el calibre, el vencimiento, la cantidad y la unidad en que
+ * vino. Cargarlo acá obligaría a crear un producto nuevo por cada camión.
+ *
+ * El catálogo lo carga el propio operario: hasta que existió esta pantalla
+ * había que entrar al panel de Supabase, y eso frenaba el alta de un palet
+ * cuando llegaba mercadería de algo que todavía no estaba cargado.
  */
 
-/** Sugerencias para no terminar con «kg», «Kg», «kilo» y «kilos» conviviendo. */
-const UNIDADES_SUGERIDAS = ['litro', 'kilo', 'bolsa', 'bidón', 'tonelada', 'unidad']
-
 const esquemaProducto = z.object({
+  categoria: z.enum(['agroquimico', 'semilla'], {
+    message: 'Elegí si es agroquímico o semilla.',
+  }),
+
   nombre: z
     .string()
     .trim()
     .min(1, 'Poné el nombre del producto.')
     .max(150, 'El nombre no puede tener más de 150 caracteres.'),
 
-  categoria: z.enum(['agroquimico', 'semilla'], {
-    message: 'Elegí si es agroquímico o semilla.',
-  }),
-
-  marca: z.string().trim().max(100, 'La marca no puede tener más de 100 caracteres.'),
-
-  principioActivo: z
-    .string()
-    .trim()
-    .max(150, 'El principio activo no puede tener más de 150 caracteres.'),
-
   concentracion: z
     .string()
     .trim()
     .max(50, 'La concentración no puede tener más de 50 caracteres.'),
-
-  unidadMedida: z
-    .string()
-    .trim()
-    .min(1, 'Poné la unidad de medida.')
-    .max(20, 'La unidad no puede tener más de 20 caracteres.'),
 })
 
 /** Datos del formulario de alta de producto. */
@@ -78,23 +66,20 @@ export function AltaProducto() {
     formState: { errors },
   } = useForm<ProductoFormData>({
     defaultValues: {
-      nombre: '',
       categoria: 'agroquimico',
-      unidadMedida: '',
-      marca: '',
-      principioActivo: '',
+      nombre: '',
       concentracion: '',
     },
     resolver: zodResolver(esquemaProducto),
   })
 
-  // El aviso de éxito se va solo: es una confirmación, no algo que haya que
-  // leer y descartar.
   // `useWatch` y no `watch()`: el segundo devuelve una función que el React
   // Compiler no puede memoizar.
   const categoria = useWatch({ control, name: 'categoria' })
   const esAgroquimico = categoria === 'agroquimico'
 
+  // El aviso de éxito se va solo: es una confirmación, no algo que haya que
+  // leer y descartar.
   useEffect(() => {
     if (creado === null) return
 
@@ -122,10 +107,8 @@ export function AltaProducto() {
     const producto = await crear.mutateAsync({
       nombre: datos.nombre,
       categoria: datos.categoria,
-      unidadMedida: datos.unidadMedida,
-      marca: datos.marca,
-      principioActivo: datos.principioActivo,
-      concentracion: datos.concentracion,
+      // La concentración es de agroquímicos: una semilla no tiene.
+      concentracion: esAgroquimico ? datos.concentracion : null,
     })
 
     setCreado(producto.nombre)
@@ -139,7 +122,7 @@ export function AltaProducto() {
       <h2 className="mb-1 text-xl font-semibold text-piedra-900">Nuevo producto</h2>
       <p className="mb-5 text-base text-piedra-600">
         Cargá el producto una sola vez. Después vas a poder crear todos los palets que
-        quieras de él.
+        quieras de él, cada uno con su lote y su cantidad.
       </p>
 
       {creado !== null && (
@@ -152,25 +135,13 @@ export function AltaProducto() {
       )}
 
       <Form onSubmit={(evento) => void handleSubmit(guardar)(evento)}>
+        {/* La categoría va primero: es lo que decide qué se pregunta abajo. */}
         <Field
-          label="Nombre del producto"
-          error={errors.nombre?.message}
-          ayuda="Poné el nombre completo, con la concentración si la tiene."
+          label="Categoría"
+          error={errors.categoria?.message}
+          ayuda="Define qué datos se piden."
           requerido
         >
-          {(props) => (
-            <Input
-              {...props}
-              {...register('nombre')}
-              invalido={errors.nombre !== undefined}
-              placeholder="Ej. Glifosato 48%"
-              maxLength={150}
-              autoComplete="off"
-            />
-          )}
-        </Field>
-
-        <Field label="Categoría" error={errors.categoria?.message} requerido>
           {(props) => (
             <Select {...props} {...register('categoria')}>
               <option value="agroquimico">Agroquímico</option>
@@ -180,88 +151,47 @@ export function AltaProducto() {
         </Field>
 
         <Field
-          label="Marca"
-          error={errors.marca?.message}
-          ayuda="Opcional. Permite después buscar todo lo de un proveedor."
+          label={esAgroquimico ? 'Nombre del producto' : 'Nombre de la semilla'}
+          error={errors.nombre?.message}
+          ayuda={
+            esAgroquimico
+              ? 'El nombre comercial, tal como figura en el envase.'
+              : 'El cultivo: soja, maíz, girasol. El híbrido va después, en cada palet.'
+          }
+          requerido
         >
           {(props) => (
             <Input
               {...props}
-              {...register('marca')}
-              invalido={errors.marca !== undefined}
-              placeholder="Ej. Bayer"
-              maxLength={100}
+              {...register('nombre')}
+              invalido={errors.nombre !== undefined}
+              placeholder={esAgroquimico ? 'Ej. Glifosato' : 'Ej. Maíz'}
+              maxLength={150}
               autoComplete="off"
             />
           )}
         </Field>
 
-        {/* El principio activo es lo que define qué se puede aplicar, y solo
-            tiene sentido en agroquímicos: una semilla no tiene. */}
+        {/* Es lo que distingue dos envases que dicen lo mismo: un Glifosato al
+            48% y uno al 62% no son el mismo producto ni rinden igual. */}
         {esAgroquimico && (
-          <>
-            <Field
-              label="Principio activo"
-              error={errors.principioActivo?.message}
-              ayuda="Opcional. Sirve para detectar que dos productos distintos son lo mismo."
-            >
-              {(props) => (
-                <Input
-                  {...props}
-                  {...register('principioActivo')}
-                  invalido={errors.principioActivo !== undefined}
-                  placeholder="Ej. Glifosato"
-                  maxLength={150}
-                  autoComplete="off"
-                />
-              )}
-            </Field>
-
-            <Field
-              label="Concentración"
-              error={errors.concentracion?.message}
-              ayuda="Opcional."
-            >
-              {(props) => (
-                <Input
-                  {...props}
-                  {...register('concentracion')}
-                  invalido={errors.concentracion !== undefined}
-                  placeholder="Ej. 48%"
-                  maxLength={50}
-                  autoComplete="off"
-                />
-              )}
-            </Field>
-          </>
-        )}
-
-        <Field
-          label="Unidad de medida"
-          error={errors.unidadMedida?.message}
-          ayuda="Cómo se cuenta el stock de este producto."
-          requerido
-        >
-          {(props) => (
-            <>
+          <Field
+            label="Concentración"
+            error={errors.concentracion?.message}
+            ayuda="Opcional, pero es lo que separa dos productos del mismo nombre."
+          >
+            {(props) => (
               <Input
                 {...props}
-                {...register('unidadMedida')}
-                invalido={errors.unidadMedida !== undefined}
-                placeholder="Ej. litro"
-                maxLength={20}
+                {...register('concentracion')}
+                invalido={errors.concentracion !== undefined}
+                placeholder="Ej. 48%"
+                maxLength={50}
                 autoComplete="off"
-                list="unidades-sugeridas"
               />
-              {/* Sugerencias nativas: guían sin impedir escribir otra cosa. */}
-              <datalist id="unidades-sugeridas">
-                {UNIDADES_SUGERIDAS.map((unidad) => (
-                  <option key={unidad} value={unidad} />
-                ))}
-              </datalist>
-            </>
-          )}
-        </Field>
+            )}
+          </Field>
+        )}
 
         {crear.isError && (
           <ErrorMessage

@@ -29,6 +29,11 @@ export type {
 export type Usuario = Tablas['usuario']['Row']
 export type Producto = Tablas['producto']['Row']
 export type Cliente = Tablas['cliente']['Row']
+export type Transportista = Tablas['transportista']['Row']
+export type EmpresaTransporte = Tablas['empresa_transporte']['Row']
+export type Sector = Tablas['sector']['Row']
+/** Un sector con quién lo ocupa, para poder ofrecer solo los libres. */
+export type SectorDisponible = Vistas['vista_sector_disponible']['Row']
 export type ObservacionPalet = Tablas['observacion_palet']['Row']
 export type Palet = Tablas['palet']['Row']
 export type DetalleAgroquimico = Tablas['detalle_agroquimico']['Row']
@@ -47,6 +52,12 @@ export type ProductoUpdate = Tablas['producto']['Update']
 export type UsuarioUpdate = Tablas['usuario']['Update']
 
 export type ClienteInsert = Tablas['cliente']['Insert']
+
+export type TransportistaInsert = Tablas['transportista']['Insert']
+export type TransportistaUpdate = Tablas['transportista']['Update']
+export type EmpresaTransporteInsert = Tablas['empresa_transporte']['Insert']
+export type SectorInsert = Tablas['sector']['Insert']
+export type SectorUpdate = Tablas['sector']['Update']
 
 export type ObservacionPaletInsert = Tablas['observacion_palet']['Insert']
 
@@ -75,6 +86,14 @@ export type PaletConProducto = Palet & {
   producto: Producto
   /** `null` = mercadería propia de AIBAR. */
   cliente: Cliente | null
+  /** Quién lo trajo. `null` si no se registró. */
+  transportista: Pick<Transportista, 'id' | 'nombre'> | null
+}
+
+/** Un chofer con el nombre de su transporte ya resuelto. */
+export type TransportistaConEmpresa = Transportista & {
+  /** `null` = fletero por su cuenta, sin transporte detrás. */
+  empresa: EmpresaTransporte | null
 }
 
 /** Nota de la bitácora con quien la escribió. */
@@ -101,6 +120,8 @@ export type PaletCompleto = PaletConProducto & {
  */
 export type MovimientoConAutor = Movimiento & {
   usuario: Pick<Usuario, 'id' | 'nombre' | 'rol'> | null
+  /** Quién se llevó la mercadería. `null` en los ajustes y en los sin registrar. */
+  transportista: Pick<Transportista, 'id' | 'nombre'> | null
 }
 
 // =========================================================

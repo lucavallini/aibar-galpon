@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useBuscarPalets } from '@/hooks/useBuscarPalets'
 import { useValorDemorado } from '@/hooks/useValorDemorado'
+import { useClientes } from '@/hooks/useClientes'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -43,8 +45,10 @@ function FilaDePalet({ palet, onAbrir }: PropsFila) {
           </p>
           <p className="mt-0.5 truncate text-sm text-piedra-500">
             Lote {palet.lote} · Galpón {palet.galpon}
-            {palet.sector !== null && (
+            {palet.sector !== null ? (
               <span className="font-medium text-piedra-700"> · {palet.sector}</span>
+            ) : (
+              <span className="font-semibold text-amber-800"> · sin ubicar</span>
             )}
           </p>
         </div>
@@ -53,7 +57,7 @@ function FilaDePalet({ palet, onAbrir }: PropsFila) {
           <p className="cifra text-xl leading-none font-bold text-piedra-900">
             {palet.cantidad_disponible}
           </p>
-          <p className="mt-0.5 text-xs text-piedra-500">{palet.producto.unidad_medida}</p>
+          <p className="mt-0.5 text-xs text-piedra-500">{palet.unidad_medida}</p>
         </div>
       </div>
 
@@ -96,6 +100,7 @@ function Campo({ id, etiqueta, valor, onCambiar, placeholder, soloNumeros }: Pro
 
 export function BuscarPalets() {
   const navegar = useNavigate()
+  const { data: clientes } = useClientes()
 
   const [numero, setNumero] = useState('')
   const [lote, setLote] = useState('')
@@ -103,7 +108,9 @@ export function BuscarPalets() {
   const [producto, setProducto] = useState('')
   const [galpon, setGalpon] = useState<Galpon | undefined>(undefined)
   const [categoria, setCategoria] = useState<Categoria | undefined>(undefined)
+  const [clienteId, setClienteId] = useState<number | 'propia' | undefined>(undefined)
   const [soloConStock, setSoloConStock] = useState(true)
+  const [soloSinUbicar, setSoloSinUbicar] = useState(false)
 
   // Los campos se actualizan en cada tecla, pero la consulta espera a que el
   // operario termine de escribir.
@@ -114,7 +121,9 @@ export function BuscarPalets() {
     producto: useValorDemorado(producto),
     galpon,
     categoria,
+    clienteId,
     soloConStock,
+    soloSinUbicar,
   }
 
   const {
@@ -138,6 +147,8 @@ export function BuscarPalets() {
     filtros.producto.trim() !== '' ||
     galpon !== undefined ||
     categoria !== undefined ||
+    clienteId !== undefined ||
+    soloSinUbicar ||
     !soloConStock
 
   function limpiar() {
@@ -147,7 +158,9 @@ export function BuscarPalets() {
     setProducto('')
     setGalpon(undefined)
     setCategoria(undefined)
+    setClienteId(undefined)
     setSoloConStock(true)
+    setSoloSinUbicar(false)
   }
 
   return (
@@ -237,6 +250,37 @@ export function BuscarPalets() {
           </div>
         </div>
 
+        {/* La empresa va como select y no como botones: los clientes son
+            muchos y crecen, mientras que los tipos y los galpones son tres. */}
+        <div>
+          <label
+            htmlFor="buscar-empresa"
+            className="rotulo mb-1.5 block"
+          >
+            Empresa
+          </label>
+          <Select
+            id="buscar-empresa"
+            value={clienteId === undefined ? '' : String(clienteId)}
+            onChange={(evento) => {
+              const valor = evento.target.value
+              setClienteId(
+                valor === '' ? undefined : valor === 'propia' ? 'propia' : Number(valor),
+              )
+            }}
+          >
+            <option value="">Todas</option>
+            {/* Un palet sin cliente es mercadería propia: en la base es un
+                `null`, no una empresa más de la lista. */}
+            <option value="propia">AIBAR S.R.L</option>
+            {clientes?.map((cliente) => (
+              <option key={cliente.id} value={String(cliente.id)}>
+                {cliente.nombre}
+              </option>
+            ))}
+          </Select>
+        </div>
+
         <div className="flex flex-wrap items-center justify-between gap-3">
           <label className="flex min-h-toque cursor-pointer items-center gap-3">
             <input
@@ -246,6 +290,18 @@ export function BuscarPalets() {
               className="size-5 accent-marca-700"
             />
             <span className="text-base text-piedra-700">Solo palets con stock</span>
+          </label>
+
+          {/* Los palets de un alta en lote nacen sin sector: este filtro es la
+              lista de los que todavía hay que ubicar en el galpón. */}
+          <label className="flex min-h-toque cursor-pointer items-center gap-3">
+            <input
+              type="checkbox"
+              checked={soloSinUbicar}
+              onChange={(evento) => setSoloSinUbicar(evento.target.checked)}
+              className="size-5 accent-marca-700"
+            />
+            <span className="text-base text-piedra-700">Solo sin ubicar</span>
           </label>
 
           {hayFiltros && (

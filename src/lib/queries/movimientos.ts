@@ -29,7 +29,9 @@ export async function listarMovimientosDePalet(
 ): Promise<MovimientoConAutor[]> {
   const respuesta = await supabase
     .from('movimiento')
-    .select('*, usuario:usuario_id(id, nombre, rol)')
+    .select(
+      '*, usuario:usuario_id(id, nombre, rol), transportista:transportista_id(id, nombre)',
+    )
     .eq('palet_id', paletId)
     .order('fecha_hora', { ascending: false })
     .order('id', { ascending: false })
@@ -83,6 +85,13 @@ export interface DatosMovimiento {
    */
   tipo: TipoMovimientoRegistrable
   cantidad: number
+  /**
+   * Quién se lleva la mercadería.
+   *
+   * Opcional: si el operario no llegó a preguntarlo, la salida se registra
+   * igual. La base lo descarta en los ajustes, donde no hubo ningún camión.
+   */
+  transportistaId?: number | null
 }
 
 /**
@@ -107,6 +116,7 @@ export async function registrarMovimiento(
       p_palet_id: datos.paletId,
       p_tipo: datos.tipo,
       p_cantidad: datos.cantidad,
+      p_transportista_id: datos.transportistaId ?? null,
     })
     .single()
 

@@ -26,10 +26,16 @@ export type PreguntaDeNegocio =
   | 'todo'
   /** Agroquímicos con la fecha de vencimiento ya pasada y stock todavía adentro. */
   | 'vencidos'
-  /** Vencen dentro de 30 días: hay que colocarlos ya. */
-  | 'vence-30'
-  /** Vencen dentro de 90 días: entra en la planificación. */
+  /** Vencen dentro de 90 días: hay que colocarlos ya. */
   | 'vence-90'
+  /**
+   * Vencen dentro de 6 meses.
+   *
+   * Es la ventana con la que se decide de verdad: colocar un agroquímico lleva
+   * meses —hay que encontrarle comprador y sacarlo del galpón—, así que un
+   * aviso a 30 días llegaba cuando ya no había margen para hacer nada.
+   */
+  | 'vence-6-meses'
   /** Más de 60 días sin registrar un solo movimiento. */
   | 'sin-movimiento'
   /** Palets abiertos a medias, candidatos a consolidar. */
@@ -39,6 +45,15 @@ export type PreguntaDeNegocio =
 
 /** Días sin movimiento a partir de los cuales un palet se considera quieto. */
 export const DIAS_INMOVILIZADO = 60
+
+/**
+ * Con cuánta anticipación se avisa que un agroquímico se está por vencer.
+ *
+ * Seis meses, contados en días porque es lo que devuelve `dias_para_vencer` de
+ * la vista. Es el plazo que pidió la gerencia: colocar un producto lleva meses,
+ * y avisar a 30 días era avisar cuando ya no se podía hacer nada.
+ */
+export const DIAS_VENCIMIENTO_PROXIMO = 180
 
 export interface FiltrosGerencia {
   pregunta: PreguntaDeNegocio
@@ -84,10 +99,10 @@ function criteriosDe(pregunta: PreguntaDeNegocio): CriteriosDePregunta {
   switch (pregunta) {
     case 'vencidos':
       return { estados: CON_STOCK, vencido: true }
-    case 'vence-30':
-      return { estados: CON_STOCK, venceEnDias: 30 }
     case 'vence-90':
       return { estados: CON_STOCK, venceEnDias: 90 }
+    case 'vence-6-meses':
+      return { estados: CON_STOCK, venceEnDias: DIAS_VENCIMIENTO_PROXIMO }
     case 'sin-movimiento':
       return { estados: CON_STOCK, quietoDesdeDias: DIAS_INMOVILIZADO }
     case 'parciales':
@@ -179,8 +194,8 @@ export async function listarPaletsGerencia(
   // va primero; si es qué no se mueve, lo más quieto.
   const respuesta =
     filtros.pregunta === 'vencidos' ||
-    filtros.pregunta === 'vence-30' ||
-    filtros.pregunta === 'vence-90'
+    filtros.pregunta === 'vence-90' ||
+    filtros.pregunta === 'vence-6-meses'
       ? await consulta.order('dias_para_vencer', { ascending: true })
       : filtros.pregunta === 'sin-movimiento'
         ? await consulta.order('dias_sin_movimiento', { ascending: false })

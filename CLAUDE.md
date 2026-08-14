@@ -193,10 +193,17 @@ quien la creó, lo que saltea RLS por completo y expondría el depósito entero 
 usuario autenticado, incluso uno inactivo.
 
 Los filtros del panel son **preguntas de negocio**, no filtros de columna: «ya vencidos»,
-«vencen en 30 días», «sin movimiento hace más de 60», «abiertos a medias». Cada una combina
+«vencen en 6 meses», «sin movimiento hace más de 60», «abiertos a medias». Cada una combina
 varios criterios y define además el orden del listado. Al agregar una, sumarla a
 `PreguntaDeNegocio` y a `criteriosDe()`, que las declara como datos y las comparten el
 listado y los conteos.
+
+La anticipación con la que se avisa un vencimiento es **6 meses** (`DIAS_VENCIMIENTO_PROXIMO`
+en `queries/gerencia.ts`), no 30 días: colocar un agroquímico lleva meses —hay que
+encontrarle comprador y sacarlo del galpón—, así que un aviso más corto llegaba cuando ya no
+quedaba margen para hacer nada. Ese mismo umbral gobierna el cartel ámbar de cada fila, y por
+eso el plazo se muestra con `formatearAnticipacion()`: pasado el par de meses cuenta en meses,
+porque «Vence en 174 d» obliga a hacer la cuenta mental.
 
 **Sobre los movimientos de stock**: se registran con `registrarMovimiento()`, que llama a la
 RPC. Nunca por `INSERT` en `movimiento` ni `UPDATE` sobre `palet` — está bloqueado por
@@ -210,6 +217,22 @@ decide es la base, que bloquea la fila mientras calcula.
 Toda acción que toque stock real pide **confirmación con resumen** antes de ejecutarse: un
 cero de más en la cantidad hay que ir a corregirlo después, con la ventana de 30 minutos
 encima.
+
+El historial abre con el **alta del palet** (`+cantidad_inicial`), que **no es una fila de
+`movimiento`**: el alta no genera ninguna, porque la cantidad inicial la fija el trigger
+`inicializar_palet()`. Se arma en la presentación (`AltaDelPalet` en
+`HistorialMovimientos`) y por eso no tiene id ni se puede corregir. Sin ella la lista
+empieza restando de un total que no figura en ningún lado. Va **al final**, porque el
+historial se lee del más reciente al más viejo.
+
+**Sobre el comprobante en PDF**: `descargarComprobanteDeMovimientos()` en
+`lib/pdfMovimientos.ts` es la única forma de sacar la trazabilidad de la app, así que lleva
+los movimientos **y las observaciones** —son las que explican un descuento— y la fecha en
+que se generó. En el papel los movimientos van del más viejo al más nuevo, al revés que en
+pantalla. `jspdf` se importa con `import()` **dentro de la función**, nunca arriba del
+archivo: pesa ~400 kB y solo hace falta al apretar el botón, igual que el lector de QR. Si
+esa carga falla —en el depósito la señal se corta— hay que mostrarlo: un botón que no hace
+nada se lee como que la app se colgó.
 
 **Sobre el escaneo**: el lector (`src/components/LectorQR.tsx`) se carga con `React.lazy`
 porque `html5-qrcode` pesa ~380 kB y solo hace falta en esa pantalla. Lo delicado ahí es
@@ -229,6 +252,62 @@ completos, y un dato cortado a la mitad no identifica nada mientras le roba tama
 El número se queda porque es el seguro contra una etiqueta arruinada: si el QR se raya o se
 moja y no hay ningún dato impreso, ese palet no se puede identificar ni buscar. Si cambia el
 rollo, rehacer las cuentas de `componerEtiqueta()` y verificarlas antes de imprimir.
+
+**Sobre los sectores**: un sector es un **lugar físico** y ahí entra un palet y no dos.
+Son filas de la tabla `sector` (una por galpón, nombre único sin distinguir mayúsculas ni
+espacios) y **no texto libre**: cuando se escribían a mano, `A7`, `a7` y `A-7` eran tres
+lugares distintos para la base y el mismo estante en el galpón. El palet apunta con
+`sector_id`; `palet.galpon` y `palet.sector` se conservan pero son **copias de lectura**
+que mantiene el trigger `sincronizar_ubicacion_palet()` —por eso salieron del `GRANT
+UPDATE`: escribirlas desde el cliente es un error de permisos, y mover un palet es
+cambiarle `sector_id`.
+
+La exclusión la garantiza el índice único parcial `palet_sector_ocupado_unico` sobre
+`sector_id` donde el estado es `activo` o `parcial`, y no un chequeo en el cliente: dos
+operarios dando de alta al mismo tiempo desde dos teléfonos se colarían por la ventana que
+deja cualquier «consultar y después insertar». El trigger `verificar_sector_libre()` existe
+solo para dar el mensaje que nombra al palet que ocupa el lugar. Cuando un palet se termina
+o se da de baja sale del índice solo y el sector queda libre sin que nadie haga nada, que es
+para lo que está el `WHERE` por estado — y por eso toda mutación que toque el estado de un
+palet tiene que invalidar `claves.sectores.todos`.
+
+`sector_id` admite `null` y significa **«está en algún lado que no se registró»**: es como
+quedan los palets que compartían lugar al migrar y los que nacen de un **alta en lote**. El
+alta de a uno **sigue exigiendo ubicación** —`crear_palet_completo()` la pide—: la única
+puerta para crear sin sector es `crear_palets_en_lote()`, y es deliberada. La app los
+muestra marcados en ámbar y el buscador tiene el filtro **«sin ubicar»**, que es la lista
+de lo que falta terminar.
+
+⚠️ El aviso de «sin ubicar» **no es una observación, es un estado**: se deduce de
+`sector_id IS NULL` en cada pantalla que lo muestra. Así aparece solo al crear el palet y
+desaparece solo al asignarle el sector, sin que nadie escriba ni borre una nota. Se
+descartó escribirlo en la bitácora porque para «sacarlo» después haría falta permitir
+borrar observaciones, y ese permiso vale para todas: también para las de roturas y
+faltantes, que son justamente las que tienen que ser imborrables. El `SelectorDeSector` ofrece **solo los libres**, y trae adentro el alta de
+un sector nuevo porque el momento en que se descubre que falta es ese: el operario está en
+el galpón, con el palet en la mano.
+
+**Sobre qué es un producto y qué es un palet**: el producto es **qué cosa es**, y se carga
+una sola vez desde `AltaProducto` — una semilla es un nombre (Soja, Maíz); un agroquímico
+es un nombre y su `concentracion`, que es lo que separa dos envases que dicen lo mismo. Todo
+lo que cambia de partida en partida vive en el palet: el lote, el vencimiento, la cantidad,
+la unidad, y en semillas el `detalle_semilla.hibrido` y el `calibre`. Por eso el alta de
+producto **no pide** marca, principio activo, especie ni híbrido aunque las columnas sigan
+existiendo: cargarlos ahí obligaba a crear un producto nuevo por cada camión.
+
+El formulario de palet nombra al lote como el depósito: **«número de lote»** en agroquímicos
+—es lo que dice el remito— y **«batch»** en semillas —es lo que dice la bolsa—. Es la misma
+columna, `palet.lote`.
+
+**Sobre la unidad de medida**: es del **palet**, no del producto (`palet.unidad_medida`). De
+la misma semilla entra una partida en bolsas y otra a granel en kilos, y del mismo
+agroquímico entran bidones y tambores. Se elige en el alta con `CampoCantidad`, de la lista
+cerrada de `src/lib/unidades.ts` — texto libre traía «kg», «Kg» y «kilos» conviviendo como
+tres unidades distintas. No está en el `GRANT UPDATE` de `palet`: como `cantidad_inicial`,
+se fija al dar de alta y no se cambia después. `producto.unidad_medida` se conserva como
+referencia y es nullable; **ninguna pantalla debe volver a leer de ahí la unidad de un
+palet**. Consecuencia en el panel: `vista_stock_por_producto` devuelve **una fila por
+producto y unidad**, porque sumar 120 bolsas con 400 kilos daría 520 de nada.
 
 **Sobre el ingreso por DNI**: en el depósito nadie tiene correo de la empresa, así que se
 entra con el DNI. Supabase Auth solo autentica por email, de modo que el DNI se convierte en
@@ -259,6 +338,41 @@ PostgREST no puede envolver dos requests HTTP en una transacción, así que inse
 y su detalle por separado dejaría el palet incompleto si el segundo falla. La misma regla
 aplica a cualquier operación futura que tenga que tocar dos tablas a la vez: se resuelve con
 una función en la base, no encadenando llamadas desde el cliente.
+
+**Sobre los transportistas**: el chofer se registra en **dos lugares distintos y no
+intercambiables**. `palet.transportista_id` es **quién lo trajo** —dato del ingreso, no
+cambia— y `movimiento.transportista_id` es **quién se lo llevó** en esa salida. Va en el
+movimiento y no en el palet porque un palet sale de a partes, cada una en un camión
+distinto: en el palet solo se podría guardar el último y se perderían los anteriores.
+
+Los dos son **siempre opcionales**: trabar una carga por un dato que el operario no
+siempre tiene a mano termina en movimientos sin registrar, que es peor que un movimiento
+sin chofer. En los **ajustes no se guarda** aunque venga —lo descarta
+`registrar_movimiento()`—: una rotura o un recuento que no cuadra no tuvieron ningún
+camión, y anotar uno sería inventar una entrega. El chofer viaja también en la **cola
+offline** (`MovimientoPendiente.transportistaId`); si se agrega otro dato al movimiento hay
+que sumarlo ahí o se pierde en los que se sincronizan tarde.
+
+Los 43 choferes y sus 9 empresas se importaron de la base de viajes que ya usa AIBAR. Como
+los sectores, `transportista` y `empresa_transporte` son **tablas con nombre único sin
+distinguir mayúsculas ni espacios**, no texto libre. Se dan de baja con `activo`, nunca
+borrando: los palets que trajeron y los movimientos que hicieron los siguen nombrando.
+
+**Sobre el alta en lote**: un lote de semilla no llega en un palet — llegan 10.000 kg del
+mismo híbrido y el mismo batch repartidos en diez. `crear_palets_en_lote()` recibe el
+**total** y en cuántos palets viene, y crea los N con su detalle en una sola transacción,
+con un tope de 50. **El reparto lo hace la base**: trunca a dos decimales y le suma la
+diferencia al último, para que la suma dé exactamente lo que entró —repartir 100 en 3 da
+33,33 + 33,33 + 33,34, no 99,99 con un kilo evaporado—. `repartirEntrePalets()` en
+`esquemaPalet.ts` **espeja ese cálculo** solo para mostrarlo antes de crear: si se cambia
+uno hay que cambiar el otro, o la pantalla promete un número y la base guarda otro.
+
+⚠️ **Los QR de un lote no se fotocopian.** Cada palet es una fila con su propio número y su
+código apunta a él: diez palets con el mismo código serían diez bultos con una sola
+identidad, sin poder ubicarlos ni descontarles stock por separado. Por eso existe
+`LoteCreado`, que deja los N QR listos para imprimir uno atrás del otro. Esa pantalla
+renderiza **un solo** QR en alta resolución por vez, el del palet que se está imprimiendo:
+cincuenta canvas de 600×600 son cincuenta bitmaps en la memoria del celular del depósito.
 
 **Sobre `src/types/database.ts`**: está escrito a mano pero con la misma forma que emite
 `supabase gen types typescript`. Si el schema cambia, se actualiza este archivo — o se

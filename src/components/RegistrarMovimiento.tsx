@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRegistrarMovimiento } from '@/hooks/useRegistrarMovimiento'
+import { useTransportistas } from '@/hooks/useTransportistas'
+import { SelectorDeTransportista } from '@/components/SelectorDeTransportista'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { Form, FormAcciones } from '@/components/ui/Form'
 import { Field } from '@/components/ui/Field'
@@ -48,6 +50,8 @@ const TIPOS: { valor: TipoMovimientoRegistrable; etiqueta: string; ayuda: string
 function crearEsquema(disponible: number) {
   return z.object({
     tipo: z.enum(['venta', 'salida', 'ajuste'], { message: 'Elegí el tipo de movimiento.' }),
+    /** Quién se la lleva. Vacío = no se registró; nunca traba la salida. */
+    transportistaId: z.string().optional(),
     cantidad: z
       .string()
       .min(1, 'Poné la cantidad.')
@@ -74,7 +78,7 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
   const [destino, setDestino] = useState<Destino>('base')
   const registrar = useRegistrarMovimiento()
 
-  const unidad = palet.producto.unidad_medida
+  const unidad = palet.unidad_medida
   const disponible = palet.cantidad_disponible
 
   /**
@@ -88,18 +92,27 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
   const [aConfirmar, setAConfirmar] = useState<{
     tipo: TipoMovimientoRegistrable
     cantidad: number
+    transportistaId: number | null
+    transportistaNombre: string | null
   } | null>(null)
+
+  const { data: transportistas } = useTransportistas()
 
   const {
     register,
     handleSubmit,
     reset,
     setValue,
+    control,
     formState: { errors },
   } = useForm<FormularioMovimiento>({
-    defaultValues: { tipo: 'venta', cantidad: '' },
+    defaultValues: { tipo: 'venta', cantidad: '', transportistaId: '' },
     resolver: zodResolver(crearEsquema(disponible)),
   })
+
+  // `useWatch` y no `watch()`: el segundo devuelve una función que el React
+  // Compiler no puede memoizar.
+  const tipoElegido = useWatch({ control, name: 'tipo' })
 
   const cantidadNumerica = aConfirmar?.cantidad ?? 0
 
@@ -124,10 +137,21 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
   }
 
   function irAConfirmacion(datos: FormularioMovimiento) {
+    // En un ajuste no hay camión —es una rotura o un recuento que no cuadra—,
+    // así que el chofer se descarta acá igual que lo descarta la base.
+    const llevaChofer = datos.tipo !== 'ajuste'
+    const id =
+      llevaChofer && datos.transportistaId !== undefined && datos.transportistaId !== ''
+        ? Number(datos.transportistaId)
+        : null
+
     setAConfirmar({
       tipo: datos.tipo,
       // La coma decimal es lo natural en el teclado del celular en castellano.
       cantidad: Number(datos.cantidad.replace(',', '.')),
+      transportistaId: id,
+      transportistaNombre:
+        transportistas?.find((cada) => cada.id === id)?.nombre ?? null,
     })
     setPaso('confirmacion')
   }
@@ -140,6 +164,8 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
         paletId: palet.id,
         tipo: aConfirmar.tipo,
         cantidad: aConfirmar.cantidad,
+        transportistaId: aConfirmar.transportistaId,
+        transportistaNombre: aConfirmar.transportistaNombre,
         paletEtiqueta: `Palet #${palet.id} · ${palet.producto.nombre}`,
         unidad,
       })
@@ -243,6 +269,24 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
             Usar todo el disponible ({disponible} {unidad})
           </Button>
 
+          {/* Solo cuando sale mercadería del galpón. En un ajuste no hay ningún
+              camión: es una rotura, un derrame o un recuento que no cuadra, y
+              anotar un chofer ahí sería inventar una entrega. */}
+          {tipoElegido !== 'ajuste' && (
+            <Controller
+              control={control}
+              name="transportistaId"
+              render={({ field }) => (
+                <SelectorDeTransportista
+                  label="¿Quién se la lleva?"
+                  valor={field.value ?? ''}
+                  onChange={field.onChange}
+                  ayuda="Opcional. Queda registrado en el historial del palet."
+                />
+              )}
+            />
+          )}
+
           {registrar.isError && (
             <ErrorMessage
               titulo="No se pudo registrar"
@@ -275,6 +319,15 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
               Palet #{palet.id} · {palet.producto.nombre}
               <br />
               Lote {palet.lote}
+              {/* Va en el resumen porque es parte de lo que se está por dejar
+                  asentado, y corregirlo después no se puede. */}
+              {aConfirmar?.transportistaNombre !== null &&
+                aConfirmar?.transportistaNombre !== undefined && (
+                  <>
+                    <br />
+                    Se la lleva {aConfirmar.transportistaNombre}
+                  </>
+                )}
             </p>
           </div>
 

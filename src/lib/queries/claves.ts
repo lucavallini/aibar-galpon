@@ -23,7 +23,10 @@ interface FiltrosBusquedaClave {
   producto?: string
   galpon?: Galpon
   categoria?: Categoria
+  /** Empresa dueña de la mercadería; `'propia'` = AIBAR. */
+  clienteId?: number | 'propia'
   soloConStock?: boolean
+  soloSinUbicar?: boolean
 }
 
 export const claves = {
@@ -39,11 +42,33 @@ export const claves = {
     busqueda: (filtros: FiltrosBusquedaClave = {}) =>
       [...claves.palets.todos, 'busqueda', filtros] as const,
     detalle: (id: number) => [...claves.palets.todos, 'detalle', id] as const,
+    /** Los palets de un lote recién creado, por sus números. */
+    porIds: (ids: number[]) => [...claves.palets.todos, 'porIds', ids] as const,
   },
 
   clientes: {
     todos: ['clientes'] as const,
     lista: () => [...claves.clientes.todos, 'lista'] as const,
+  },
+
+  transportistas: {
+    todos: ['transportistas'] as const,
+    lista: () => [...claves.transportistas.todos, 'lista'] as const,
+  },
+
+  empresasDeTransporte: {
+    todos: ['empresasDeTransporte'] as const,
+    lista: () => [...claves.empresasDeTransporte.todos, 'lista'] as const,
+  },
+
+  sectores: {
+    todos: ['sectores'] as const,
+    /**
+     * La ocupación se invalida con cada alta, movimiento y baja: un palet que
+     * se termina libera su lugar, y ofrecer un sector ocupado haría que el
+     * operario cargue todo el formulario para que la base se lo rechace.
+     */
+    ocupacion: (galpon: Galpon) => [...claves.sectores.todos, 'ocupacion', galpon] as const,
   },
 
   movimientos: {

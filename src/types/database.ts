@@ -62,14 +62,43 @@ type ProductoRow = {
   id: number
   nombre: string
   categoria: Categoria
-  unidad_medida: string
+  /**
+   * Cómo suele venir este producto, y nada más.
+   *
+   * La unidad con la que se cuenta el stock es la del palet: de la misma
+   * semilla entra una partida en bolsas y otra a granel en kilos. Es `null` en
+   * los productos cargados desde que el alta dejó de pedirla.
+   */
+  unidad_medida: string | null
   /** Bayer, Syngenta, Nidera… */
   marca: string | null
   /** Glifosato, atrazina. Solo tiene sentido en agroquímicos. */
   principio_activo: string | null
   /** 48%, 50 g/l. */
   concentracion: string | null
+  especie: string | null
+  hibrido: string | null
   created_at: string
+}
+
+type SectorRow = {
+  id: number
+  galpon: Galpon
+  nombre: string
+  activo: boolean
+  created_at: string
+}
+
+/** Un sector con quién lo está ocupando. Espeja `vista_sector_disponible`. */
+type SectorDisponibleRow = {
+  id: number
+  galpon: Galpon
+  nombre: string
+  activo: boolean
+  /** `null` si está libre. */
+  palet_id: number | null
+  palet_lote: string | null
+  libre: boolean
 }
 
 type PaletRow = {
@@ -78,14 +107,51 @@ type PaletRow = {
   lote: string
   cantidad_inicial: number
   cantidad_disponible: number
+  /**
+   * En qué se cuenta lo que entró: bolsas, litros, kilos.
+   *
+   * Es del palet y no del producto porque dos partidas de lo mismo pueden venir
+   * en unidades distintas. Se fija en el alta y no está en el `GRANT UPDATE`:
+   * después no se cambia desde el cliente, igual que `cantidad_inicial`.
+   */
+  unidad_medida: string
   galpon: Galpon
+  /**
+   * Nombre del sector, mantenido por el trigger `sincronizar_ubicacion_palet`.
+   * Es una copia de lectura: la ubicación real es `sector_id`.
+   */
   sector: string | null
+  /** `null` = sin ubicar. La app lo marca para que se corrija. */
+  sector_id: number | null
   fecha_ingreso: string
   estado: EstadoPalet
   /** `null` = mercadería propia de AIBAR. */
   cliente_id: number | null
+  /** Quién lo trajo. Dato del ingreso: no cambia. `null` si no se registró. */
+  transportista_id: number | null
   created_at: string
   updated_at: string
+}
+
+type EmpresaTransporteRow = {
+  id: number
+  nombre: string
+  created_at: string
+}
+
+/** Un chofer. Trae mercadería al depósito o se la lleva. */
+type TransportistaRow = {
+  id: number
+  nombre: string
+  /** `null` = fletero por su cuenta, sin transporte detrás. */
+  empresa_transporte_id: number | null
+  telefono: string | null
+  /**
+   * `false` saca al chofer de la lista sin tocar lo ya registrado: los palets
+   * que trajo y los movimientos que hizo lo siguen nombrando.
+   */
+  activo: boolean
+  created_at: string
 }
 
 type ClienteRow = {
@@ -125,6 +191,13 @@ type MovimientoRow = {
   corrige_a: number | null
   /** Obligatorio en las correcciones, `null` en el resto. */
   motivo: string | null
+  /**
+   * Quién se llevó la mercadería en esta salida.
+   *
+   * Va acá y no en el palet porque un palet sale de a partes, cada una en un
+   * camión distinto. `null` en los ajustes: ahí no hubo ningún camión.
+   */
+  transportista_id: number | null
   fecha_hora: string
 }
 
@@ -140,13 +213,20 @@ type PaletGerenciaRow = {
   cantidad_inicial: number
   cantidad_disponible: number
   galpon: Galpon
+  /**
+   * Nombre del sector, mantenido por el trigger `sincronizar_ubicacion_palet`.
+   * Es una copia de lectura: la ubicación real es `sector_id`.
+   */
   sector: string | null
+  /** `null` = sin ubicar. La app lo marca para que se corrija. */
+  sector_id: number | null
   fecha_ingreso: string
   estado: EstadoPalet
+  /** En qué se cuenta este palet. Sale del palet, no del producto. */
+  unidad_medida: string
 
   producto_nombre: string
   producto_categoria: Categoria
-  producto_unidad_medida: string
   producto_marca: string | null
   producto_principio_activo: string | null
   producto_concentracion: string | null
@@ -154,6 +234,10 @@ type PaletGerenciaRow = {
   /** `null` = mercadería propia de AIBAR. */
   cliente_id: number | null
   cliente_nombre: string | null
+
+  /** Quién trajo el palet. `null` si no se registró. */
+  transportista_id: number | null
+  transportista_nombre: string | null
 
   fecha_elaboracion: string | null
   fecha_vencimiento: string | null
@@ -174,12 +258,20 @@ type PaletGerenciaRow = {
   ultima_observacion_autor: string | null
 }
 
-/** Fila de `vista_stock_por_producto`: el consolidado de cada producto. */
+/**
+ * Fila de `vista_stock_por_producto`: el consolidado de cada producto.
+ *
+ * Hay **una fila por producto y unidad**, no una por producto: desde que la
+ * unidad es del palet, el mismo maíz puede tener 120 bolsas y 400 kilos a
+ * granel, y sumarlos daría 520 de nada. Por eso la clave de una fila es
+ * `producto_id` + `unidad_medida`.
+ */
 type StockPorProductoRow = {
   producto_id: number
   producto_nombre: string
   producto_categoria: Categoria
-  producto_unidad_medida: string
+  /** La unidad de estos palets. `'unidad'` en un producto que todavía no tiene. */
+  unidad_medida: string
   producto_marca: string | null
   producto_principio_activo: string | null
   producto_concentracion: string | null
@@ -224,16 +316,37 @@ export type Database = {
         Relationships: []
       }
 
+      sector: {
+        Row: SectorRow
+        /** El `GRANT INSERT` expone solo estas dos: el resto lo pone la base. */
+        Insert: {
+          galpon: Galpon
+          nombre: string
+        }
+        /** Un sector no se borra, se desactiva. */
+        Update: {
+          nombre?: string
+          activo?: boolean
+        }
+        Relationships: []
+      }
+
       producto: {
         Row: ProductoRow
         Insert: {
           id?: number
           nombre: string
           categoria: Categoria
-          unidad_medida: string
+          /**
+           * Opcional desde que la unidad es del palet: acá queda, a lo sumo,
+           * como referencia de cómo suele venir el producto.
+           */
+          unidad_medida?: string | null
           marca?: string | null
           principio_activo?: string | null
           concentracion?: string | null
+          especie?: string | null
+          hibrido?: string | null
           created_at?: string
         }
         // La categoría deja de ser editable en cuanto el producto tiene palets
@@ -245,6 +358,8 @@ export type Database = {
           marca?: string | null
           principio_activo?: string | null
           concentracion?: string | null
+          especie?: string | null
+          hibrido?: string | null
         }
         Relationships: []
       }
@@ -261,7 +376,7 @@ export type Database = {
           lote: string
           cantidad_inicial: number
           galpon: Galpon
-          sector?: string | null
+          sector_id?: number | null
           fecha_ingreso?: string
           cliente_id?: number | null
         }
@@ -273,8 +388,12 @@ export type Database = {
         Update: {
           producto_id?: number
           lote?: string
-          galpon?: Galpon
-          sector?: string | null
+          /**
+           * Mover un palet es cambiarle el sector: el galpón y el nombre los
+           * recalcula la base. `galpon` y `sector` ya no están en el
+           * `GRANT UPDATE`, así que escribirlos es un error de permisos.
+           */
+          sector_id?: number | null
           fecha_ingreso?: string
           cliente_id?: number | null
         }
@@ -328,6 +447,38 @@ export type Database = {
             referencedColumns: ['id']
           },
         ]
+      }
+
+      empresa_transporte: {
+        Row: EmpresaTransporteRow
+        Insert: {
+          id?: number
+          nombre: string
+          created_at?: string
+        }
+        // Sin Update: el nombre de un transporte no se corrige desde la app.
+        Update: never
+        Relationships: []
+      }
+
+      transportista: {
+        Row: TransportistaRow
+        Insert: {
+          id?: number
+          nombre: string
+          empresa_transporte_id?: number | null
+          telefono?: string | null
+          activo?: boolean
+          created_at?: string
+        }
+        // Exactamente las columnas del `GRANT UPDATE`.
+        Update: {
+          nombre?: string
+          empresa_transporte_id?: number | null
+          telefono?: string | null
+          activo?: boolean
+        }
+        Relationships: []
       }
 
       cliente: {
@@ -415,6 +566,11 @@ export type Database = {
      * vista corre con los permisos de quien la creó y saltearía las policies.
      */
     Views: {
+      vista_sector_disponible: {
+        Row: SectorDisponibleRow
+        Relationships: []
+      }
+
       vista_palet_gerencia: {
         Row: PaletGerenciaRow
         Relationships: []
@@ -444,11 +600,17 @@ export type Database = {
          * pueda inferir el tipo de los argumentos.
          */
         Args: {
-          p_producto_id: number
+          /**
+           * `null` en semilla: ahí el producto lo resuelve la base a partir de
+           * `p_hibrido`. Se manda uno de los dos, nunca ninguno ni los dos.
+           */
+          p_producto_id: number | null
           p_lote: string
           p_cantidad_inicial: number
-          p_galpon: Galpon
-          p_sector: string | null
+          /** En qué se cuenta lo que entró: bolsas, litros, kilos. */
+          p_unidad_medida: string
+          /** El galpón sale del sector: no se manda por separado. */
+          p_sector_id: number
           p_fecha_ingreso: string | null
           /** Solo se usa si el producto es agroquímico. */
           p_fecha_elaboracion: string | null
@@ -462,8 +624,41 @@ export type Database = {
           p_cliente_id: number | null
           /** Primera nota de la bitácora, opcional. */
           p_observacion: string | null
+          /** Quién trajo la mercadería. `null` si no se registró. */
+          p_transportista_id: number | null
         }
         Returns: PaletRow
+      }
+
+      /**
+       * Da de alta un lote repartido en varios palets.
+       *
+       * Devuelve los N creados, en orden. Nacen **sin sector**: es la única
+       * excepción a la regla de que el alta exige ubicación, porque elegir diez
+       * lugares antes de tener los palets delante obliga a decidirlos de
+       * memoria. El galpón sí va, que es lo que se sabe al descargar.
+       */
+      crear_palets_en_lote: {
+        Args: {
+          p_producto_id: number
+          p_lote: string
+          /** El total del lote. La base lo reparte entre los palets. */
+          p_cantidad_total: number
+          p_unidad_medida: string
+          /** Entre 1 y 50. */
+          p_cantidad_palets: number
+          p_galpon: number
+          p_hibrido: string | null
+          p_calibre: string | null
+          p_fecha_ingreso: string | null
+          p_fecha_elaboracion: string | null
+          p_fecha_vencimiento: string | null
+          p_cliente_id: number | null
+          p_observacion: string | null
+          /** Quién trajo el lote entero. */
+          p_transportista_id: number | null
+        }
+        Returns: PaletRow[]
       }
 
       /**
@@ -485,6 +680,11 @@ export type Database = {
           p_palet_id: number
           p_tipo: TipoMovimientoRegistrable
           p_cantidad: number
+          /**
+           * Quién se lleva la mercadería. La base lo descarta en los ajustes:
+           * ahí no hay ningún camión.
+           */
+          p_transportista_id: number | null
         }
         Returns: MovimientoRow
       }

@@ -44,7 +44,7 @@ export function usePaletGerencia(id: number | null) {
 /** Preguntas que se muestran como tarjeta de alerta arriba del listado. */
 const PREGUNTAS_CON_ALERTA: PreguntaDeNegocio[] = [
   'vencidos',
-  'vence-30',
+  'vence-6-meses',
   'con-novedades',
   'sin-movimiento',
   'parciales',

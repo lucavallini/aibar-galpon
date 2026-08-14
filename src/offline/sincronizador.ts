@@ -80,6 +80,7 @@ export async function sincronizar(): Promise<ResultadoSincronizacion> {
           paletId: movimiento.paletId,
           tipo: movimiento.tipo,
           cantidad: movimiento.cantidad,
+          transportistaId: movimiento.transportistaId,
         })
 
         // Recién con la confirmación de la base sale de la cola.

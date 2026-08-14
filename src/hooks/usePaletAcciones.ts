@@ -24,6 +24,8 @@ function invalidarTodoDelPalet(
     queryKey: claves.observaciones.dePalet(paletId),
   })
   void clienteDeQueries.invalidateQueries({ queryKey: ['gerencia'] })
+  // Dar de baja o mover un palet cambia qué sectores están libres.
+  void clienteDeQueries.invalidateQueries({ queryKey: claves.sectores.todos })
 }
 
 /** Corrige los datos de identificación de un palet. */

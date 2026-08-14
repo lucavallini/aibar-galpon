@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { UNIDADES_DE_MEDIDA } from '@/lib/unidades'
 import type { Categoria } from '@/types'
 
 /**
@@ -20,6 +21,15 @@ import type { Categoria } from '@/types'
 
 /** Tope de `NUMERIC(10,2)`: 8 dígitos enteros más 2 decimales. */
 const MAXIMO_CANTIDAD = 99_999_999.99
+
+/**
+ * Cuántos palets admite un lote.
+ *
+ * Existe para que un cero de más no cree mil palets que después hay que dar de
+ * baja de a uno. Espeja el tope de `crear_palets_en_lote()`: si se cambia acá,
+ * hay que cambiarlo también en la base, que es la que manda.
+ */
+export const MAXIMO_PALETS_POR_LOTE = 50
 
 /**
  * Lee un número escrito por una persona.
@@ -58,10 +68,21 @@ export const esquemaPalet = z.object({
     message: 'Elegí si es agroquímico o semilla.',
   }),
 
-  productoId: z
-    .string()
-    .min(1, 'Elegí un producto.'),
+  /**
+   * Qué cosa es, elegido del catálogo. Lo llevan las dos categorías.
+   *
+   * En la semilla el producto es el cultivo —Soja, Maíz— y el híbrido de la
+   * partida va aparte, en el palet: dos camiones de maíz con híbridos distintos
+   * son el mismo producto y no dos entradas del catálogo.
+   */
+  productoId: z.string().min(1, 'Elegí un producto.'),
 
+  /**
+   * Lo que en el remito de un agroquímico es el «número de lote» y en la bolsa
+   * de una semilla es el «batch»: el mismo dato con dos nombres según de qué
+   * mercadería se trate. La etiqueta la pone la pantalla; la columna es una
+   * sola, `palet.lote`.
+   */
   lote: z
     .string()
     .trim()
@@ -85,9 +106,42 @@ export const esquemaPalet = z.object({
       'Como máximo dos decimales.',
     ),
 
+  /**
+   * En qué se cuenta lo que entró.
+   *
+   * Lista cerrada y no texto libre: escrita a mano terminaban conviviendo «kg»,
+   * «Kg» y «kilos» como tres unidades distintas.
+   */
+  unidadMedida: z.enum(UNIDADES_DE_MEDIDA, { message: 'Elegí la unidad.' }),
+
+  /**
+   * En cuántos palets viene el lote.
+   *
+   * Con `1` —lo normal— el alta funciona como siempre. Con más, la cantidad
+   * pasa a ser el total del lote, la base lo reparte y los palets nacen sin
+   * sector, porque elegir diez lugares de memoria antes de descargar no es algo
+   * que el operario pueda hacer.
+   */
+  cantidadPalets: z
+    .string()
+    .min(1, 'Poné cuántos palets trae el lote.')
+    .refine((valor) => /^\d+$/.test(valor.trim()), 'Poné un número entero.')
+    .refine((valor) => Number(valor) >= 1, 'Tiene que ser al menos 1.')
+    .refine(
+      (valor) => Number(valor) <= MAXIMO_PALETS_POR_LOTE,
+      `Un lote no puede tener más de ${MAXIMO_PALETS_POR_LOTE} palets.`,
+    ),
+
   galpon: z.enum(['1', '2', '3'], { message: 'Elegí un galpón.' }),
 
-  sector: textoOpcional(50, 'El sector no puede tener más de 50 caracteres.'),
+  /**
+   * Id del sector, elegido de la lista de libres.
+   *
+   * Obligatorio: un sector es un lugar físico y admite un palet a la vez. Sin
+   * ubicación no hay forma de saber si un lugar está libre, y el palet termina
+   * habiendo que buscarlo a ojo por el galpón.
+   */
+  sectorId: z.string(),
 
   fechaIngreso: z
     .string()
@@ -105,6 +159,15 @@ export const esquemaPalet = z.object({
   /** Vacío = mercadería de AIBAR S.R.L. */
   clienteId: z.string().optional(),
 
+  /**
+   * Quién trajo la mercadería. Vacío = no se registró.
+   *
+   * Siempre opcional: trabar el alta por un dato que el operario no siempre
+   * tiene a mano terminaría en palets sin cargar, que es peor que un palet sin
+   * chofer.
+   */
+  transportistaId: z.string().optional(),
+
   /** Primera nota de la bitácora. */
   observacion: textoOpcional(500, 'La observación no puede tener más de 500 caracteres.'),
 })
@@ -120,6 +183,33 @@ export type FormularioPalet = z.infer<typeof esquemaPalet>
  */
 export function esquemaPaletSegunCategoria(categoria: Categoria | null) {
   return esquemaPalet.superRefine((valores, contexto) => {
+    // Un palet solo se ubica al darlo de alta; los de un lote nacen sin sector
+    // y se ubican al descargarlos, así que ahí el campo ni se muestra.
+    if (esUnSoloPalet(valores.cantidadPalets) && valores.sectorId.trim() === '') {
+      contexto.addIssue({
+        code: 'custom',
+        path: ['sectorId'],
+        message: 'Elegí en qué sector queda el palet.',
+      })
+    }
+
+    // Repartir 10 kg en 300 palets deja a cada uno en cero, y la base lo
+    // rechaza. Se avisa antes de mandar el formulario entero.
+    if (!esUnSoloPalet(valores.cantidadPalets)) {
+      const reparto = repartirEntrePalets(
+        aNumero(valores.cantidadInicial),
+        Number(valores.cantidadPalets),
+      )
+
+      if (reparto !== null && reparto.porPalet <= 0) {
+        contexto.addIssue({
+          code: 'custom',
+          path: ['cantidadInicial'],
+          message: 'No alcanza para tantos palets: a cada uno le tocaría menos de 0,01.',
+        })
+      }
+    }
+
     if (categoria === 'agroquimico') {
       // Es un depósito de agroquímicos: sin vencimiento no se puede controlar
       // el stock vencido. La base lo acepta nulo, nosotros no.
@@ -146,7 +236,66 @@ export function esquemaPaletSegunCategoria(categoria: Categoria | null) {
         })
       }
     }
+
+    if (categoria === 'semilla') {
+      // El producto dice el cultivo —Maíz— y el híbrido dice cuál: sin él, dos
+      // partidas distintas quedan indistinguibles en el listado, y es el dato
+      // que el operario tiene delante impreso en la bolsa.
+      if (valores.hibrido === undefined || valores.hibrido.trim() === '') {
+        contexto.addIssue({
+          code: 'custom',
+          path: ['hibrido'],
+          message: 'Poné el híbrido de la semilla.',
+        })
+      }
+    }
   })
+}
+
+/** `'1'`, vacío o cualquier cosa que no sea un número mayor a uno. */
+export function esUnSoloPalet(cantidadPalets: string | undefined): boolean {
+  const cantidad = Number((cantidadPalets ?? '1').trim())
+
+  return !Number.isInteger(cantidad) || cantidad <= 1
+}
+
+export interface RepartoDelLote {
+  /** Lo que le toca a cada palet menos al último. */
+  porPalet: number
+  /** El último se queda con el resto, para que la suma dé el total exacto. */
+  ultimo: number
+  cantidadPalets: number
+}
+
+/**
+ * Cómo se reparte el total entre los palets del lote.
+ *
+ * **Espeja el cálculo de `crear_palets_en_lote()`**, que es el que manda: acá
+ * se replica solo para poder mostrarle al operario cuánto va a quedar en cada
+ * palet antes de crearlos. Si se cambia el reparto en la base, hay que cambiarlo
+ * también acá o la pantalla va a prometer un número y la base guardar otro.
+ *
+ * Trunca a dos decimales —lo que aguanta `NUMERIC(10,2)`— y le suma la
+ * diferencia al último: repartir 100 en 3 da 33,33 + 33,33 + 33,34, y no 99,99
+ * con un kilo evaporado.
+ *
+ * @returns `null` si los datos todavía no sirven para calcular nada.
+ */
+export function repartirEntrePalets(
+  total: number,
+  cantidadPalets: number,
+): RepartoDelLote | null {
+  if (!Number.isFinite(total) || total <= 0) return null
+  if (!Number.isInteger(cantidadPalets) || cantidadPalets < 1) return null
+
+  const porPalet = Math.trunc((total / cantidadPalets) * 100) / 100
+
+  // Las dos vueltas por centavos evitan que 0.1 + 0.2 = 0.30000000000000004 se
+  // filtre a la cantidad que se muestra.
+  const ultimo =
+    Math.round(total * 100 - porPalet * 100 * (cantidadPalets - 1)) / 100
+
+  return { porPalet, ultimo, cantidadPalets }
 }
 
 /** Convierte un texto de formulario a lo que espera la base: texto o `null`. */
@@ -170,8 +319,8 @@ export function aDatosNuevoPalet(valores: FormularioPalet, categoria: Categoria 
     productoId: Number(valores.productoId),
     lote: valores.lote.trim(),
     cantidadInicial: aNumero(valores.cantidadInicial),
-    galpon: Number(valores.galpon) as 1 | 2 | 3,
-    sector: aTextoONulo(valores.sector),
+    unidadMedida: valores.unidadMedida,
+    sectorId: Number(valores.sectorId),
     fechaIngreso: valores.fechaIngreso,
     fechaElaboracion: esAgroquimico ? aTextoONulo(valores.fechaElaboracion) : null,
     fechaVencimiento: esAgroquimico ? aTextoONulo(valores.fechaVencimiento) : null,
@@ -182,7 +331,27 @@ export function aDatosNuevoPalet(valores: FormularioPalet, categoria: Categoria 
       valores.clienteId === undefined || valores.clienteId === ''
         ? null
         : Number(valores.clienteId),
+    transportistaId:
+      valores.transportistaId === undefined || valores.transportistaId === ''
+        ? null
+        : Number(valores.transportistaId),
     observacion: aTextoONulo(valores.observacion),
+  }
+}
+
+/**
+ * Lo mismo que `aDatosNuevoPalet()`, para un lote repartido en varios palets.
+ *
+ * `cantidadInicial` viaja como **el total del lote**: el reparto lo hace la
+ * base. En lugar del sector va el galpón, porque estos palets nacen sin ubicar.
+ */
+export function aDatosNuevoLote(valores: FormularioPalet, categoria: Categoria | null) {
+  const { sectorId: _sectorId, ...comunes } = aDatosNuevoPalet(valores, categoria)
+
+  return {
+    ...comunes,
+    cantidadPalets: Number(valores.cantidadPalets),
+    galpon: Number(valores.galpon),
   }
 }
 

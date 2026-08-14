@@ -22,6 +22,9 @@ export function useCorregirMovimiento() {
         queryKey: claves.movimientos.dePalet(datos.paletId),
       })
       void clienteDeQueries.invalidateQueries({ queryKey: claves.palets.todos })
+      // Un palet que se vacía o se da de baja libera su sector: si la
+      // ocupación no se refresca, el alta siguiente no ofrecería ese lugar.
+      void clienteDeQueries.invalidateQueries({ queryKey: claves.sectores.todos })
     },
   })
 }

@@ -14,6 +14,7 @@ import { HistorialMovimientos } from '@/components/HistorialMovimientos'
 import { RegistrarMovimiento } from '@/components/RegistrarMovimiento'
 import { CorregirMovimiento } from '@/components/CorregirMovimiento'
 import { BitacoraPalet } from '@/components/BitacoraPalet'
+import { BotonDescargarMovimientos } from '@/components/BotonDescargarMovimientos'
 import { EditarPalet } from '@/components/EditarPalet'
 import { useVentanaDeCorreccion } from '@/hooks/useVentanaDeCorreccion'
 import { useOffline } from '@/hooks/useOffline'
@@ -135,9 +136,35 @@ export function DetallePalet() {
     )
   }
 
-  const unidad = palet.producto.unidad_medida
+  const unidad = palet.unidad_medida
   const dadoDeBaja = palet.estado === 'baja'
+
+  /** Lo que el comprobante en PDF necesita saber de este palet. */
+  const paletParaPdf = {
+    id: palet.id,
+    producto: palet.producto.nombre,
+    lote: palet.lote,
+    galpon: palet.galpon,
+    sector: palet.sector,
+    unidad,
+    cantidadInicial: palet.cantidad_inicial,
+    cantidadDisponible: palet.cantidad_disponible,
+    estado: palet.estado,
+    empresa: palet.cliente?.nombre ?? null,
+    transportista: palet.transportista?.nombre ?? null,
+    fechaIngreso: palet.fecha_ingreso,
+  }
   const sinStock = palet.cantidad_disponible === 0
+  /**
+   * El palet está en algún lado que nadie registró.
+   *
+   * Es como quedan los de un alta en lote, que se ubican al descargarlos. No se
+   * escribe en la bitácora: se deduce de que no tenga sector, así el aviso
+   * aparece solo al crearlo y desaparece solo al asignarle el lugar, sin que
+   * nadie tenga que escribir ni borrar una nota. La bitácora es inmutable y
+   * esto no es una nota: es un estado.
+   */
+  const sinUbicar = palet.sector_id === null
   const hayPendientesDeEstePalet = paletTienePendientes(palet.id)
 
   return (
@@ -158,6 +185,23 @@ export function DetallePalet() {
             No se pueden registrar movimientos sobre él. Si es un error, hablá con el
             encargado.
           </p>
+        </div>
+      )}
+
+      {sinUbicar && !dadoDeBaja && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+          <p className="font-semibold text-amber-900">Este palet está sin ubicar</p>
+          <p className="mt-1 text-base text-amber-900">
+            No se registró en qué sector quedó, así que no hay forma de encontrarlo sin
+            recorrer el galpón {palet.galpon}. Asignale el lugar donde lo dejaste.
+          </p>
+          <Button
+            variante="secundario"
+            className="mt-3"
+            onClick={() => setEditando(true)}
+          >
+            Asignar sector
+          </Button>
         </div>
       )}
 
@@ -254,9 +298,16 @@ export function DetallePalet() {
           <Dato etiqueta="Cliente">
             {palet.cliente?.nombre ?? 'AIBAR S.R.L'}
           </Dato>
-          <Dato etiqueta="Galpón">
-            {palet.galpon}
-            {palet.sector !== null && ` · ${palet.sector}`}
+          <Dato etiqueta="Ubicación">
+            {/* Sin sector el palet está en algún lado que nadie registró: se
+                marca en vez de dejar el dato en blanco, que pasa desapercibido. */}
+            {palet.sector !== null ? (
+              `Galpón ${palet.galpon} · ${palet.sector}`
+            ) : (
+              <span className="font-semibold text-amber-800">
+                Galpón {palet.galpon} · sin ubicar
+              </span>
+            )}
           </Dato>
           <Dato etiqueta="Ingreso">{formatearFecha(palet.fecha_ingreso)}</Dato>
 
@@ -322,6 +373,7 @@ export function DetallePalet() {
         ) : (
           <HistorialMovimientos
             movimientos={movimientos}
+            alta={{ fecha: palet.fecha_ingreso, cantidad: palet.cantidad_inicial }}
             usuarioActualId={usuario?.id ?? null}
             unidad={unidad}
             idCorregible={
@@ -330,6 +382,13 @@ export function DetallePalet() {
             onCorregir={setCorrigiendo}
           />
         )}
+
+        <div className="mt-4">
+          <BotonDescargarMovimientos
+            palet={paletParaPdf}
+            movimientos={movimientos ?? []}
+          />
+        </div>
       </Card>
 
       <BitacoraPalet paletId={palet.id} />

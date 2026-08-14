@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useEditarPalet, useDarDeBajaPalet } from '@/hooks/usePaletAcciones'
@@ -8,6 +8,7 @@ import { useClientes } from '@/hooks/useClientes'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { Form, FormAcciones } from '@/components/ui/Form'
 import { Field } from '@/components/ui/Field'
+import { SelectorDeSector } from '@/components/SelectorDeSector'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
@@ -38,7 +39,7 @@ const esquemaEdicion = z.object({
     .min(1, 'El lote es obligatorio.')
     .max(50, 'El lote no puede tener más de 50 caracteres.'),
   galpon: z.enum(['1', '2', '3'], { message: 'Elegí un galpón.' }),
-  sector: z.string().trim().max(50, 'El sector no puede tener más de 50 caracteres.'),
+  sectorId: z.string().min(1, 'Elegí en qué sector queda el palet.'),
   clienteId: z.string(),
 })
 
@@ -57,16 +58,21 @@ export function EditarPalet({ palet, abierto, onCerrar }: Props) {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm<FormularioEdicion>({
     defaultValues: {
       lote: palet.lote,
       galpon: String(palet.galpon) as '1' | '2' | '3',
-      sector: palet.sector ?? '',
+      sectorId: palet.sector_id === null ? '' : String(palet.sector_id),
       clienteId: palet.cliente_id === null ? '' : String(palet.cliente_id),
     },
     resolver: zodResolver(esquemaEdicion),
   })
+
+  // El galpón elegido define qué sectores se ofrecen: un sector pertenece a uno
+  // solo, así que mover el palet de galpón es elegirle un lugar de la otra lista.
+  const galponElegido = useWatch({ control, name: 'galpon' })
 
   // El producto no se ofrece si el palet ya tuvo movimientos: la base lo
   // rechazaría (trigger `proteger_identidad_palet`) porque a esa altura la
@@ -89,8 +95,8 @@ export function EditarPalet({ palet, abierto, onCerrar }: Props) {
       paletId: palet.id,
       datos: {
         lote: datos.lote,
-        galpon: Number(datos.galpon) as Galpon,
-        sector: datos.sector,
+        // El galpón viaja con el sector: lo recalcula la base.
+        sectorId: Number(datos.sectorId),
         clienteId: datos.clienteId === '' ? null : Number(datos.clienteId),
       },
     })
@@ -142,16 +148,21 @@ export function EditarPalet({ palet, abierto, onCerrar }: Props) {
             )}
           </Field>
 
-          <Field label="Sector" error={errors.sector?.message} ayuda="Opcional.">
-            {(props) => (
-              <Input
-                {...props}
-                {...register('sector')}
-                invalido={errors.sector !== undefined}
-                placeholder="Ej. Pasillo B, estante 3"
+          {/* Mover un palet es elegirle otro lugar de la lista de libres: si se
+              escribiera a mano podría quedar encima de otro. */}
+          <Controller
+            control={control}
+            name="sectorId"
+            render={({ field }) => (
+              <SelectorDeSector
+                galpon={Number(galponElegido) as Galpon}
+                valor={field.value}
+                onChange={field.onChange}
+                error={errors.sectorId?.message}
+                sectorActualId={palet.sector_id}
               />
             )}
-          </Field>
+          />
 
           <Field label="Cliente" ayuda="Dejalo en AIBAR S.R.L si la mercadería es nuestra.">
             {(props) => (
@@ -202,7 +213,7 @@ export function EditarPalet({ palet, abierto, onCerrar }: Props) {
               Palet #{palet.id} · {palet.producto.nombre}
             </p>
             <p className="mt-2 text-base text-red-800">
-              Quedan {palet.cantidad_disponible} {palet.producto.unidad_medida} que van a
+              Quedan {palet.cantidad_disponible} {palet.unidad_medida} que van a
               dejar de figurar como stock disponible.
             </p>
             <p className="mt-2 text-base text-red-800">

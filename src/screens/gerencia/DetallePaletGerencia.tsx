@@ -13,6 +13,8 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EstadoPaletBadge } from '@/components/EstadoPaletBadge'
 import { HistorialMovimientos } from '@/components/HistorialMovimientos'
 import { BitacoraPalet } from '@/components/BitacoraPalet'
+import { BotonDescargarMovimientos } from '@/components/BotonDescargarMovimientos'
+import { formatearAnticipacion } from '@/lib/vencimiento'
 import { RUTAS } from '@/rutas'
 
 /**
@@ -94,7 +96,7 @@ export function DetallePaletGerencia() {
     )
   }
 
-  const unidad = palet.producto_unidad_medida
+  const unidad = palet.unidad_medida
   const vencido = palet.dias_para_vencer !== null && palet.dias_para_vencer < 0
   const consumido = palet.cantidad_inicial - palet.cantidad_disponible
 
@@ -143,14 +145,20 @@ export function DetallePaletGerencia() {
             {palet.producto_categoria === 'agroquimico' ? 'Agroquímico' : 'Semilla'}
           </Dato>
           <Dato etiqueta="Lote">{palet.lote}</Dato>
-          <Dato etiqueta="Cliente">
+          <Dato etiqueta="Empresa">
             {palet.cliente_nombre ?? 'AIBAR S.R.L'}
           </Dato>
-          <Dato etiqueta="Galpón">
-            {palet.galpon}
-            {palet.sector !== null && ` · ${palet.sector}`}
+          <Dato etiqueta="Ubicación">
+            {palet.sector !== null ? (
+              `Galpón ${palet.galpon} · ${palet.sector}`
+            ) : (
+              <span className="font-semibold text-amber-800">
+                Galpón {palet.galpon} · sin ubicar
+              </span>
+            )}
           </Dato>
           <Dato etiqueta="Ingreso">{formatearFecha(palet.fecha_ingreso)}</Dato>
+          <Dato etiqueta="Lo trajo">{palet.transportista_nombre ?? '—'}</Dato>
 
           {palet.producto_categoria === 'agroquimico' && (
             <>
@@ -159,7 +167,7 @@ export function DetallePaletGerencia() {
                 {formatearFecha(palet.fecha_vencimiento)}
                 {palet.dias_para_vencer !== null && !vencido && (
                   <span className="ml-2 text-sm font-normal text-piedra-500">
-                    (en {palet.dias_para_vencer} días)
+                    (en {formatearAnticipacion(palet.dias_para_vencer)})
                   </span>
                 )}
               </Dato>
@@ -208,10 +216,32 @@ export function DetallePaletGerencia() {
           // Sin `onCorregir`: el historial no ofrece ninguna acción al jefe.
           <HistorialMovimientos
             movimientos={movimientos}
+            alta={{ fecha: palet.fecha_ingreso, cantidad: palet.cantidad_inicial }}
             usuarioActualId={usuario?.id ?? null}
             unidad={unidad}
           />
         )}
+
+        {/* Descargar no es escribir: el panel sigue siendo de solo lectura. */}
+        <div className="mt-4">
+          <BotonDescargarMovimientos
+            palet={{
+              id: palet.id,
+              producto: palet.producto_nombre,
+              lote: palet.lote,
+              galpon: palet.galpon,
+              sector: palet.sector,
+              unidad,
+              cantidadInicial: palet.cantidad_inicial,
+              cantidadDisponible: palet.cantidad_disponible,
+              estado: palet.estado,
+              empresa: palet.cliente_nombre,
+              transportista: palet.transportista_nombre,
+              fechaIngreso: palet.fecha_ingreso,
+            }}
+            movimientos={movimientos ?? []}
+          />
+        </div>
       </Card>
 
       <Button variante="secundario" anchoCompleto onClick={() => navegar(RUTAS.gerencia)}>

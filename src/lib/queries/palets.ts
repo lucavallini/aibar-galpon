@@ -23,7 +23,8 @@ import type {
 
 /** Columnas del palet más su producto resuelto. */
 /** El cliente viene `null` cuando la mercadería es propia de AIBAR. */
-const SELECT_CON_PRODUCTO = '*, producto:producto_id(*), cliente:cliente_id(*)'
+const SELECT_CON_PRODUCTO =
+  '*, producto:producto_id(*), cliente:cliente_id(*), transportista:transportista_id(id, nombre)'
 
 /** Lo anterior más ambos detalles; solo viene cargado el de la categoría del producto. */
 const SELECT_COMPLETO = `${SELECT_CON_PRODUCTO}, detalle_agroquimico(*), detalle_semilla(*)`
@@ -112,8 +113,23 @@ export interface FiltrosBusqueda {
    * es un **O** junto al lote y al sector.
    */
   idsDeCategoria?: number[]
+  /**
+   * Empresa dueña de la mercadería. `'propia'` trae los palets sin cliente, que
+   * son los de AIBAR.
+   *
+   * Va contra `palet.cliente_id`, que sí es columna de la tabla: no necesita el
+   * rodeo que hacen el producto y la categoría.
+   */
+  clienteId?: number | 'propia'
   /** `true` deja fuera los vacíos y los dados de baja. */
   soloConStock?: boolean
+  /**
+   * `true` deja solo los que no tienen sector asignado.
+   *
+   * Es la lista de pendientes de un alta en lote: esos palets nacen sin ubicar
+   * y hay que asignarles el lugar al descargarlos.
+   */
+  soloSinUbicar?: boolean
 }
 
 export interface PaginaDePalets {
@@ -170,6 +186,18 @@ export async function buscarPalets(
 
   if (filtros.idsDeProducto !== undefined) {
     consulta = consulta.in('producto_id', filtros.idsDeProducto)
+  }
+
+  if (filtros.soloSinUbicar === true) {
+    consulta = consulta.is('sector_id', null)
+  }
+
+  // `is null` y no `eq`: un palet sin cliente es mercadería propia de AIBAR, y
+  // en SQL nada es «igual» a NULL, ni siquiera NULL.
+  if (filtros.clienteId === 'propia') {
+    consulta = consulta.is('cliente_id', null)
+  } else if (filtros.clienteId !== undefined) {
+    consulta = consulta.eq('cliente_id', filtros.clienteId)
   }
 
   const desde = pagina * PALETS_POR_PAGINA
@@ -239,11 +267,28 @@ export async function obtenerPaletSimple(id: number): Promise<Palet> {
  * ignoran.
  */
 export interface DatosNuevoPalet {
-  productoId: number
+  /**
+   * Solo para agroquímicos, que se eligen del catálogo.
+   *
+   * En semilla va `null`: la identifica el `hibrido`, y la base resuelve con él
+   * el producto —lo reutiliza si esa variedad ya entró alguna vez, lo crea si es
+   * la primera. Exactamente uno de los dos, nunca ninguno ni los dos.
+   */
+  productoId: number | null
   lote: string
   cantidadInicial: number
-  galpon: Galpon
-  sector?: string | null
+  /**
+   * En qué se cuenta lo que entró: bolsas, litros, kilos.
+   *
+   * Va en el palet y no en el producto porque dos partidas de lo mismo pueden
+   * venir en unidades distintas. Se fija acá y no se cambia después.
+   */
+  unidadMedida: string
+  /**
+   * El lugar donde queda. El galpón sale de acá: un sector pertenece a uno solo,
+   * así que mandar los dos abriría la puerta a que se contradigan.
+   */
+  sectorId: number
   /** `YYYY-MM-DD`. Si se omite, la base usa la fecha de hoy. */
   fechaIngreso?: string | null
   /** Agroquímico. */
@@ -258,6 +303,11 @@ export interface DatosNuevoPalet {
   clienteId?: number | null
   /** Primera nota de la bitácora. Opcional. */
   observacion?: string | null
+  /**
+   * Quién trajo la mercadería. Opcional: si el operario no llegó a
+   * preguntárselo, el alta no se traba.
+   */
+  transportistaId?: number | null
 }
 
 /**
@@ -279,8 +329,8 @@ export async function crearPalet(datos: DatosNuevoPalet): Promise<Palet> {
       p_producto_id: datos.productoId,
       p_lote: datos.lote,
       p_cantidad_inicial: datos.cantidadInicial,
-      p_galpon: datos.galpon,
-      p_sector: datos.sector ?? null,
+      p_unidad_medida: datos.unidadMedida,
+      p_sector_id: datos.sectorId,
       p_fecha_ingreso: datos.fechaIngreso ?? null,
       p_fecha_elaboracion: datos.fechaElaboracion ?? null,
       p_fecha_vencimiento: datos.fechaVencimiento ?? null,
@@ -288,6 +338,7 @@ export async function crearPalet(datos: DatosNuevoPalet): Promise<Palet> {
       p_calibre: datos.calibre ?? null,
       p_cliente_id: datos.clienteId ?? null,
       p_observacion: datos.observacion ?? null,
+      p_transportista_id: datos.transportistaId ?? null,
     })
     .single()
 
@@ -295,18 +346,94 @@ export async function crearPalet(datos: DatosNuevoPalet): Promise<Palet> {
 }
 
 /**
+ * Varios palets por su número, en el orden en que se pidieron.
+ *
+ * Es lo que necesita la pantalla del lote recién creado: diez consultas de a una
+ * serían diez viajes para mostrar una sola lista. PostgREST no garantiza el
+ * orden del `in`, así que se reordena acá — en el lote importa, porque el
+ * operario va imprimiendo de arriba hacia abajo.
+ */
+export async function listarPaletsPorIds(ids: number[]): Promise<PaletConProducto[]> {
+  if (ids.length === 0) return []
+
+  const respuesta = await supabase
+    .from('palet')
+    .select(SELECT_CON_PRODUCTO)
+    .in('id', ids)
+    .returns<PaletConProducto[]>()
+
+  const palets = desempaquetarLista(respuesta, 'obtener los palets del lote')
+
+  return ids
+    .map((id) => palets.find((palet) => palet.id === id))
+    .filter((palet): palet is PaletConProducto => palet !== undefined)
+}
+
+/** Un lote que llegó repartido en varios palets iguales. */
+export interface DatosNuevoLote extends Omit<DatosNuevoPalet, 'sectorId' | 'productoId'> {
+  productoId: number
+  /**
+   * En cuántos palets viene el lote. Entre 2 y 50 — con 1 se usa el alta
+   * común, que sí pide sector.
+   */
+  cantidadPalets: number
+  /**
+   * El galpón donde descarga el camión.
+   *
+   * Va en lugar del sector: los palets nacen sin ubicar y se les asigna el
+   * lugar al descargarlos, pero el galpón se sabe de entrada y la columna es
+   * obligatoria.
+   */
+  galpon: number
+}
+
+/**
+ * Da de alta un lote entero: N palets con su detalle, en una sola transacción.
+ *
+ * `cantidadInicial` es **el total del lote**, no lo de cada palet: la base lo
+ * reparte y le suma el resto al último, así la suma de los N da exactamente lo
+ * que entró. Repartir en el navegador dejaría la cuenta del lado que no manda.
+ *
+ * @throws {ErrorSupabase} con el mensaje de la base.
+ */
+export async function crearLoteDePalets(datos: DatosNuevoLote): Promise<Palet[]> {
+  const respuesta = await supabase.rpc('crear_palets_en_lote', {
+    p_producto_id: datos.productoId,
+    p_lote: datos.lote,
+    p_cantidad_total: datos.cantidadInicial,
+    p_unidad_medida: datos.unidadMedida,
+    p_cantidad_palets: datos.cantidadPalets,
+    p_galpon: datos.galpon,
+    p_hibrido: datos.hibrido ?? null,
+    p_calibre: datos.calibre ?? null,
+    p_fecha_ingreso: datos.fechaIngreso ?? null,
+    p_fecha_elaboracion: datos.fechaElaboracion ?? null,
+    p_fecha_vencimiento: datos.fechaVencimiento ?? null,
+    p_cliente_id: datos.clienteId ?? null,
+    p_observacion: datos.observacion ?? null,
+    p_transportista_id: datos.transportistaId ?? null,
+  })
+
+  return desempaquetarLista(respuesta, 'dar de alta el lote')
+}
+
+/**
  * Datos editables de un palet.
  *
  * Son exactamente las columnas del `GRANT UPDATE`: `cantidad_inicial` es
  * inmutable y el stock solo se mueve por RPC. Lo que sí puede corregirse es la
- * identificación —un lote mal tipeado, un galpón equivocado— que hasta ahora
+ * identificación —un lote mal tipeado, un sector equivocado— que hasta ahora
  * obligaba a rehacer el palet.
  */
 export interface DatosEdicionPalet {
   productoId?: number
   lote?: string
-  galpon?: Galpon
-  sector?: string | null
+  /**
+   * Mover un palet es elegirle otro sector: el galpón y el nombre los recalcula
+   * la base a partir de este id. `null` deja el palet sin ubicar, que es como
+   * quedan los que hay que reubicar.
+   */
+  sectorId?: number | null
   fechaIngreso?: string
   clienteId?: number | null
 }
@@ -316,7 +443,8 @@ export interface DatosEdicionPalet {
  *
  * La base impide cambiar producto o lote si el palet ya tuvo movimientos
  * (trigger `proteger_identidad_palet`): a esa altura la etiqueta impresa y el
- * historial ya dicen otra cosa. Su mensaje llega tal cual.
+ * historial ya dicen otra cosa. Su mensaje llega tal cual, igual que el de
+ * mover un palet a un sector que ya está ocupado.
  *
  * @throws {ErrorSupabase} con el mensaje de la base.
  */
@@ -331,11 +459,7 @@ export async function editarPalet(
 
   if (datos.productoId !== undefined) cambios.producto_id = datos.productoId
   if (datos.lote !== undefined) cambios.lote = datos.lote.trim()
-  if (datos.galpon !== undefined) cambios.galpon = datos.galpon
-  if (datos.sector !== undefined) {
-    const limpio = datos.sector?.trim() ?? ''
-    cambios.sector = limpio === '' ? null : limpio
-  }
+  if (datos.sectorId !== undefined) cambios.sector_id = datos.sectorId
   if (datos.fechaIngreso !== undefined) cambios.fecha_ingreso = datos.fechaIngreso
   if (datos.clienteId !== undefined) cambios.cliente_id = datos.clienteId
 

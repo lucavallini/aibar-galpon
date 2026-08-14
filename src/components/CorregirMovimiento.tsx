@@ -58,7 +58,7 @@ export function CorregirMovimiento({ palet, movimiento, onCerrar }: Props) {
     resolver: zodResolver(esquemaCorreccion),
   })
 
-  const unidad = palet.producto.unidad_medida
+  const unidad = palet.unidad_medida
   // La corrección devuelve exactamente lo que descontó el movimiento original.
   const restituido = movimiento?.cantidad ?? 0
   const nuevoDisponible = palet.cantidad_disponible + restituido

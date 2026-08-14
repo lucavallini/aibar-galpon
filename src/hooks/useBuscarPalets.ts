@@ -13,7 +13,16 @@ export interface FiltrosDeBusqueda {
   producto: string
   galpon?: Galpon
   categoria?: Categoria
+  /**
+   * Empresa dueña de la mercadería. `'propia'` son los palets de AIBAR.
+   *
+   * A diferencia del producto y la categoría, este no necesita resolverse
+   * contra el catálogo: `cliente_id` es columna de `palet`.
+   */
+  clienteId?: number | 'propia'
   soloConStock: boolean
+  /** Solo los que quedaron sin sector, para poder terminar de ubicarlos. */
+  soloSinUbicar: boolean
 }
 
 /**
@@ -67,7 +76,9 @@ export function useBuscarPalets(filtros: FiltrosDeBusqueda) {
       producto: filtros.producto.trim(),
       galpon: filtros.galpon,
       categoria: filtros.categoria,
+      clienteId: filtros.clienteId,
       soloConStock: filtros.soloConStock,
+      soloSinUbicar: filtros.soloSinUbicar,
     }),
     queryFn: ({ pageParam }) =>
       buscarPalets(
@@ -77,7 +88,9 @@ export function useBuscarPalets(filtros: FiltrosDeBusqueda) {
           sector: filtros.sector,
           idsDeProducto,
           galpon: filtros.galpon,
+          clienteId: filtros.clienteId,
           soloConStock: filtros.soloConStock,
+          soloSinUbicar: filtros.soloSinUbicar,
         },
         pageParam as number,
       ),
