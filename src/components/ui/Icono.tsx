@@ -3,7 +3,7 @@ import { cx } from '@/lib/cx'
 /**
  * Iconos de la app.
  *
- * Dibujados a mano y no importados de una librería: son ocho, y una dependencia
+ * Dibujados a mano y no importados de una librería: son once, y una dependencia
  * más significaría cargar cientos que nunca se usan en un teléfono con mala
  * señal.
  *
@@ -22,6 +22,7 @@ export type NombreIcono =
   | 'panel'
   | 'usuarios'
   | 'pendientes'
+  | 'editar'
   | 'salir'
 
 interface Props {
@@ -112,6 +113,14 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
     <>
       <circle cx="12" cy="12" r="8" />
       <path d="M12 7.5V12l3 2" />
+    </>
+  ),
+
+  // Un lápiz en diagonal: corregir lo que ya está escrito, no escribir de cero.
+  editar: (
+    <>
+      <path d="M12 20h8" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7.5 18.5 3.5 19.5l1-4z" />
     </>
   ),
 

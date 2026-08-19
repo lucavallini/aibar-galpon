@@ -53,7 +53,11 @@ function NavPie({ items }: { items: ItemNav[] }) {
                 cx(
                   'relative flex min-h-toque-holgado flex-col items-center justify-center gap-1 px-1 py-2',
                   'text-[0.6875rem] font-medium transition-colors',
-                  isActive ? 'text-marca-700' : 'text-piedra-500 active:text-piedra-800',
+                  // `marca-800` y no `marca-700`: son 11 px, el tamaño más
+                  // chico de la app, y el verde corporativo da 5,3:1 sobre
+                  // blanco contra los 7,4:1 del 800. La marca de posición de
+                  // abajo sí va en 700, que es una forma, no texto.
+                  isActive ? 'text-marca-800' : 'text-piedra-500 active:text-piedra-800',
                 )
               }
             >

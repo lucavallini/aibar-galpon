@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { usePalet } from '@/hooks/usePalet'
 import { useMovimientosDePalet } from '@/hooks/useMovimientosDePalet'
@@ -9,6 +9,8 @@ import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { EstadoPaletBadge } from '@/components/EstadoPaletBadge'
+import { FaroPalet } from '@/components/FaroPalet'
+import { Icono } from '@/components/ui/Icono'
 import { EtiquetaPalet } from '@/components/EtiquetaPalet'
 import { HistorialMovimientos } from '@/components/HistorialMovimientos'
 import { RegistrarMovimiento } from '@/components/RegistrarMovimiento'
@@ -30,20 +32,6 @@ import type { MovimientoConAutor } from '@/types'
  * Es una sola pantalla para los dos momentos —con `?creado=1` agrega el aviso de
  * alta— porque mostraban exactamente lo mismo y mantener dos era duplicar.
  */
-
-interface PropsDato {
-  etiqueta: string
-  children: ReactNode
-}
-
-function Dato({ etiqueta, children }: PropsDato) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b border-piedra-100 py-2 last:border-b-0">
-      <dt className="text-base text-piedra-500">{etiqueta}</dt>
-      <dd className="text-right text-base font-medium text-piedra-900">{children}</dd>
-    </div>
-  )
-}
 
 /** `2026-08-12` a `12/08/2026`, sin correr el día por la zona horaria. */
 function formatearFecha(fecha: string): string {
@@ -167,8 +155,100 @@ export function DetallePalet() {
   const sinUbicar = palet.sector_id === null
   const hayPendientesDeEstePalet = paletTienePendientes(palet.id)
 
+  /**
+   * El formulario y la pantalla nombran al lote como el depósito: «número de
+   * lote» es lo que dice el remito de un agroquímico, «batch» es lo que dice la
+   * bolsa de semilla. Es la misma columna, `palet.lote`.
+   */
+  const esSemilla = palet.detalle_semilla !== null
+  const etiquetaDeLote = esSemilla ? 'Batch' : 'Lote'
+
+  /**
+   * Los datos que van sueltos bajo el nombre del producto.
+   *
+   * Se arman como lista y no como marcado suelto porque cambian según lo que
+   * sea el palet: una semilla tiene híbrido y calibre, un agroquímico tiene
+   * elaboración y vencimiento, y ninguno de los dos tiene los del otro.
+   *
+   * No están ni la cantidad ni la unidad —las dice el faro, arriba— ni el lote
+   * ni el cliente, que ya están en la línea del producto: repetir un dato a
+   * cuatro centímetros del original solo agranda la pantalla.
+   */
+  const datosDelPalet: { etiqueta: string; valor: string; alerta?: boolean }[] = []
+
+  if (palet.detalle_semilla !== null) {
+    if (palet.detalle_semilla.hibrido !== null) {
+      datosDelPalet.push({ etiqueta: 'Híbrido', valor: palet.detalle_semilla.hibrido })
+    }
+
+    if (palet.detalle_semilla.calibre !== null) {
+      datosDelPalet.push({ etiqueta: 'Calibre', valor: palet.detalle_semilla.calibre })
+    }
+  }
+
+  if (palet.detalle_agroquimico !== null) {
+    if (palet.detalle_agroquimico.fecha_elaboracion !== null) {
+      datosDelPalet.push({
+        etiqueta: 'Elaboración',
+        valor: formatearFecha(palet.detalle_agroquimico.fecha_elaboracion),
+      })
+    }
+
+    if (palet.detalle_agroquimico.fecha_vencimiento !== null) {
+      datosDelPalet.push({
+        etiqueta: 'Vencimiento',
+        valor: formatearFecha(palet.detalle_agroquimico.fecha_vencimiento),
+      })
+    }
+  }
+
+  datosDelPalet.push({
+    etiqueta: 'Ingresó',
+    valor: formatearFecha(palet.fecha_ingreso),
+  })
+
+  // Quién lo trajo. Es opcional: no siempre se registra, y en ese caso no se
+  // muestra la fila vacía.
+  if (palet.transportista != null) {
+    datosDelPalet.push({ etiqueta: 'Lo trajo', valor: palet.transportista.nombre })
+  }
+
+  // Sin sector el palet está en algún lado que nadie registró: se marca en
+  // ámbar en vez de dejar el dato en blanco, que pasa desapercibido.
+  datosDelPalet.push(
+    palet.sector !== null
+      ? { etiqueta: 'Ubicación', valor: `Galpón ${palet.galpon} · ${palet.sector}` }
+      : {
+          etiqueta: 'Ubicación',
+          valor: `Galpón ${palet.galpon} · sin ubicar`,
+          alerta: true,
+        },
+  )
+
   return (
     <div className="flex flex-col gap-4">
+      {/* --- Lo que se busca al escanear: cuánto queda ---
+          La cifra abre la pantalla y ocupa el encabezado entero, sobre color
+          lleno. Se mira con el palet delante, a veces a un brazo de distancia
+          y con sol de frente: en ese segundo hace falta un solo dato. --- */}
+      <FaroPalet
+        className="-mt-5"
+        disponible={palet.cantidad_disponible}
+        inicial={palet.cantidad_inicial}
+        unidad={unidad}
+        // Un palet vacío o dado de baja en verde lleno diría «acá hay
+        // mercadería», que es justo lo contrario de lo que pasa.
+        apagado={sinStock || dadoDeBaja}
+        encabezado={
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="cifra text-base font-bold tracking-wide text-white">
+              PALET {palet.id}
+            </span>
+            <EstadoPaletBadge estado={palet.estado} />
+          </div>
+        }
+      />
+
       {reciénCreado && (
         <p
           role="status"
@@ -212,7 +292,7 @@ export function DetallePalet() {
         <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
           <p className="font-semibold text-amber-900">Tenés movimientos sin registrar</p>
           <p className="mt-1 text-base text-amber-900">
-            El número de abajo es el que hay en el sistema y todavía no incluye lo que
+            El número de arriba es el que hay en el sistema y todavía no incluye lo que
             registraste sin señal. Va a cambiar cuando se sincronice.
           </p>
         </div>
@@ -228,35 +308,49 @@ export function DetallePalet() {
         </div>
       )}
 
-      {/* --- Lo que se busca al escanear: cuánto queda ---
-          La cifra es lo único grande de la pantalla. Se lee de lejos, con el
-          palet delante y el teléfono en la mano. --- */}
-      <Card className="px-4 py-6 text-center">
-        <p className="rotulo">Disponible</p>
+      {/* --- Identificación ---
+          Qué es este palet, debajo de cuánto queda. Los datos van sueltos bajo
+          el nombre del producto y no en una grilla con bordes: son pocos, y una
+          tabla al lado del faro le compite el ojo a la cifra. --- */}
+      <div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-2xl font-bold tracking-tight text-piedra-900">
+              {palet.producto.nombre}
+            </h2>
+            <p className="cifra mt-0.5 text-base text-piedra-600">
+              {etiquetaDeLote} {palet.lote} · {palet.cliente?.nombre ?? 'AIBAR S.R.L'}
+            </p>
+          </div>
 
-        <p className="mt-2 flex items-baseline justify-center gap-2">
-          <span
-            className={cx(
-              'cifra text-6xl leading-none font-bold',
-              sinStock ? 'text-piedra-400' : 'text-marca-700',
-            )}
-          >
-            {palet.cantidad_disponible}
-          </span>
-          <span className="text-xl text-piedra-500">{unidad}</span>
-        </p>
-
-        <p className="cifra mt-3 text-sm text-piedra-500">
-          de {palet.cantidad_inicial} {unidad} iniciales
-        </p>
-
-        <div className="mt-4 flex items-center justify-center gap-2 border-t border-piedra-100 pt-3">
-          <span className="cifra text-sm font-semibold text-piedra-700">
-            Palet #{palet.id}
-          </span>
-          <EstadoPaletBadge estado={palet.estado} />
+          {!dadoDeBaja && (
+            <Button
+              variante="secundario"
+              iconoSolo
+              aria-label="Corregir los datos del palet"
+              onClick={() => setEditando(true)}
+            >
+              <Icono nombre="editar" tamaño={19} />
+            </Button>
+          )}
         </div>
-      </Card>
+
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1.5">
+          {datosDelPalet.map((dato) => (
+            <p key={dato.etiqueta} className="text-base">
+              <span className="rotulo">{dato.etiqueta}</span>{' '}
+              <span
+                className={cx(
+                  'font-medium',
+                  dato.alerta === true ? 'text-amber-800' : 'text-piedra-900',
+                )}
+              >
+                {dato.valor}
+              </span>
+            </p>
+          ))}
+        </div>
+      </div>
 
       {/* La acción principal de esta pantalla: descontar stock.
           La base lo rechazaría igual, pero deshabilitarlo evita que el operario
@@ -290,76 +384,16 @@ export function DetallePalet() {
         onCerrar={() => setEditando(false)}
       />
 
-      {/* --- Identificación --- */}
-      <Card>
-        <dl>
-          <Dato etiqueta="Producto">{palet.producto.nombre}</Dato>
-          <Dato etiqueta="Lote">{palet.lote}</Dato>
-          <Dato etiqueta="Cliente">
-            {palet.cliente?.nombre ?? 'AIBAR S.R.L'}
-          </Dato>
-          <Dato etiqueta="Ubicación">
-            {/* Sin sector el palet está en algún lado que nadie registró: se
-                marca en vez de dejar el dato en blanco, que pasa desapercibido. */}
-            {palet.sector !== null ? (
-              `Galpón ${palet.galpon} · ${palet.sector}`
-            ) : (
-              <span className="font-semibold text-amber-800">
-                Galpón {palet.galpon} · sin ubicar
-              </span>
-            )}
-          </Dato>
-          <Dato etiqueta="Ingreso">{formatearFecha(palet.fecha_ingreso)}</Dato>
-
-          {palet.detalle_agroquimico !== null && (
-            <>
-              <Dato etiqueta="Elaboración">
-                {palet.detalle_agroquimico.fecha_elaboracion !== null
-                  ? formatearFecha(palet.detalle_agroquimico.fecha_elaboracion)
-                  : '—'}
-              </Dato>
-              <Dato etiqueta="Vencimiento">
-                {palet.detalle_agroquimico.fecha_vencimiento !== null
-                  ? formatearFecha(palet.detalle_agroquimico.fecha_vencimiento)
-                  : '—'}
-              </Dato>
-            </>
-          )}
-
-          {palet.detalle_semilla !== null && (
-            <>
-              <Dato etiqueta="Híbrido">{palet.detalle_semilla.hibrido ?? '—'}</Dato>
-              <Dato etiqueta="Calibre">{palet.detalle_semilla.calibre ?? '—'}</Dato>
-            </>
-          )}
-        </dl>
-
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <Button
-            variante="fantasma"
-            anchoCompleto
-            cargando={isFetching}
-            onClick={() => {
-              void refetch()
-              void reintentarHistorial()
-            }}
-          >
-            {isFetching ? 'Actualizando…' : 'Actualizar datos'}
-          </Button>
-
-          {/* Un palet dado de baja ya no se corrige: quedó fuera de
-              circulación y su historial tiene que reflejar cómo estaba. */}
-          {!dadoDeBaja && (
-            <Button variante="secundario" anchoCompleto onClick={() => setEditando(true)}>
-              Corregir datos
-            </Button>
-          )}
-        </div>
-      </Card>
-
       {/* --- Historial --- */}
       <Card>
-        <h2 className="mb-2 text-lg font-semibold text-piedra-900">Movimientos</h2>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold text-piedra-900">Movimientos</h2>
+
+          <BotonDescargarMovimientos
+            palet={paletParaPdf}
+            movimientos={movimientos ?? []}
+          />
+        </div>
 
         {cargandoMovimientos ? (
           <div className="flex justify-center py-6 text-marca-700">
@@ -373,7 +407,13 @@ export function DetallePalet() {
         ) : (
           <HistorialMovimientos
             movimientos={movimientos}
-            alta={{ fecha: palet.fecha_ingreso, cantidad: palet.cantidad_inicial }}
+            alta={{
+              fecha: palet.fecha_ingreso,
+              cantidad: palet.cantidad_inicial,
+              // Quién lo trajo: el transportista del ingreso, que no es el de
+              // ninguna salida. Es el dato que cierra de dónde salió el palet.
+              transportista: palet.transportista?.nombre ?? null,
+            }}
             usuarioActualId={usuario?.id ?? null}
             unidad={unidad}
             idCorregible={
@@ -382,13 +422,6 @@ export function DetallePalet() {
             onCorregir={setCorrigiendo}
           />
         )}
-
-        <div className="mt-4">
-          <BotonDescargarMovimientos
-            palet={paletParaPdf}
-            movimientos={movimientos ?? []}
-          />
-        </div>
       </Card>
 
       <BitacoraPalet paletId={palet.id} />
@@ -406,6 +439,17 @@ export function DetallePalet() {
         </Button>
         <Button
           variante="secundario"
+          anchoCompleto
+          cargando={isFetching}
+          onClick={() => {
+            void refetch()
+            void reintentarHistorial()
+          }}
+        >
+          {isFetching ? 'Actualizando…' : 'Actualizar datos'}
+        </Button>
+        <Button
+          variante="fantasma"
           anchoCompleto
           onClick={() => navegar(reciénCreado ? RUTAS.nuevoPalet : RUTAS.operario)}
         >

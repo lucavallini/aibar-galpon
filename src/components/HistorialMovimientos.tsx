@@ -17,6 +17,14 @@ export interface AltaDelPalet {
   /** `YYYY-MM-DD`: la fecha de ingreso que cargó el operario. */
   fecha: string
   cantidad: number
+  /**
+   * Quién trajo el palet al depósito, si se registró.
+   *
+   * Es `palet.transportista_id`, y no tiene nada que ver con el transportista
+   * de un movimiento: ese es quién se llevó una parte. Acá va el del ingreso,
+   * que es el único momento en que el palet entró completo.
+   */
+  transportista?: string | null
 }
 
 interface Props {
@@ -88,6 +96,12 @@ function FilaDeAlta({ alta, unidad }: { alta: AltaDelPalet; unidad: string }) {
       <p className="mt-1 text-sm text-piedra-500">
         {formatearFecha(alta.fecha)} · ingreso al depósito
       </p>
+
+      {/* Es opcional: trabar el alta por un dato que el operario no siempre
+          tiene a mano termina en palets sin cargar. */}
+      {alta.transportista != null && alta.transportista !== '' && (
+        <p className="mt-1 text-sm text-piedra-600">Lo trajo {alta.transportista}</p>
+      )}
     </li>
   )
 }
@@ -176,7 +190,7 @@ export function HistorialMovimientos({
             {/* En un ajuste no hay chofer: no hubo ningún camión. */}
             {movimiento.transportista !== null && (
               <p className="mt-1 text-sm text-piedra-600">
-                Se la llevó {movimiento.transportista.nombre}
+                Se lo llevó {movimiento.transportista.nombre}
               </p>
             )}
 

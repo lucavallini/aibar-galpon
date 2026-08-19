@@ -6,6 +6,7 @@ import { Form } from '@/components/ui/Form'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { Icono } from '@/components/ui/Icono'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { RUTA_INICIAL_POR_ROL, RUTAS } from '@/rutas'
 
@@ -70,14 +71,24 @@ export function Login() {
   return (
     <main className="flex h-full flex-col justify-center overflow-y-auto bg-piedra-100 px-4 py-12">
       <div className="mx-auto w-full max-w-sm">
-        <header className="mb-8 text-center">
+        <header className="mb-8 flex flex-col items-center text-center">
+          {/* El isotipo va acá y no en el header de adentro: en el celular esos
+              375 px se necesitan enteros para el título y la conexión, pero en
+              el login sobra lugar y es donde la app se presenta. */}
+          <span
+            aria-hidden="true"
+            className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-marca-700"
+          >
+            <Icono nombre="palet" tamaño={34} className="text-white" />
+          </span>
+
           <h1 className="text-3xl font-bold tracking-tight text-marca-800">AIBAR</h1>
           <p className="mt-1 text-base text-piedra-600">Trazabilidad de palets</p>
         </header>
 
         <Form
           onSubmit={manejarEnvio}
-          className="rounded-xl border border-piedra-200 bg-white p-6 shadow-sm"
+          className="rounded-xl border border-piedra-200 bg-white p-6"
         >
           <Field label="DNI" requerido>
             {(props) => (

@@ -81,12 +81,38 @@ describe('quién se llevó la mercadería', () => {
       />,
     )
 
-    expect(screen.getByText(/se la llev\u00f3 diego mateo/i)).toBeInTheDocument()
+    expect(screen.getByText(/se lo llev\u00f3 diego mateo/i)).toBeInTheDocument()
   })
 
   it('no dice nada cuando no se registró', () => {
     render(<HistorialMovimientos movimientos={[MOVIMIENTO]} unidad="bolsa" />)
 
-    expect(screen.queryByText(/se la llev\u00f3/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/se lo llev\u00f3/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('quién trajo el palet', () => {
+  it('lo muestra en el alta', () => {
+    render(
+      <HistorialMovimientos
+        movimientos={[]}
+        alta={{ fecha: '2026-08-04', cantidad: 200, transportista: 'Julio Recalde' }}
+        unidad="bolsa"
+      />,
+    )
+
+    expect(screen.getByText(/lo trajo julio recalde/i)).toBeInTheDocument()
+  })
+
+  it('no dice nada cuando el palet entró sin transportista', () => {
+    render(
+      <HistorialMovimientos
+        movimientos={[]}
+        alta={{ fecha: '2026-08-04', cantidad: 200, transportista: null }}
+        unidad="bolsa"
+      />,
+    )
+
+    expect(screen.queryByText(/lo trajo/i)).not.toBeInTheDocument()
   })
 })

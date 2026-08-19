@@ -11,6 +11,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EstadoPaletBadge } from '@/components/EstadoPaletBadge'
+import { FaroPalet } from '@/components/FaroPalet'
 import { HistorialMovimientos } from '@/components/HistorialMovimientos'
 import { BitacoraPalet } from '@/components/BitacoraPalet'
 import { BotonDescargarMovimientos } from '@/components/BotonDescargarMovimientos'
@@ -113,30 +114,32 @@ export function DetallePaletGerencia() {
         </div>
       )}
 
-      <Card className="px-4 py-6 text-center">
-        <p className="rotulo">Disponible</p>
+      {/* El mismo bloque que ve el operario al escanear, y a propósito: cuando
+          el jefe y el depósito hablan por teléfono sobre un palet, los dos
+          tienen que estar mirando el mismo número en el mismo lugar. */}
+      <FaroPalet
+        disponible={palet.cantidad_disponible}
+        inicial={palet.cantidad_inicial}
+        unidad={unidad}
+        apagado={palet.cantidad_disponible === 0 || palet.estado === 'baja'}
+        encabezado={
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="cifra text-base font-bold tracking-wide text-white">
+              PALET {palet.id}
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <EstadoPaletBadge estado={palet.estado} />
+              {palet.dias_sin_movimiento >= DIAS_INMOVILIZADO && (
+                <Badge variante="neutral">Quieto {palet.dias_sin_movimiento} días</Badge>
+              )}
+            </div>
+          </div>
+        }
+      />
 
-        <p className="mt-2 flex items-baseline justify-center gap-2">
-          <span className="cifra text-6xl leading-none font-bold text-marca-700">
-            {palet.cantidad_disponible}
-          </span>
-          <span className="text-xl text-piedra-500">{unidad}</span>
-        </p>
-
-        <p className="cifra mt-3 text-sm text-piedra-500">
-          de {palet.cantidad_inicial} {unidad} · salieron {consumido}
-        </p>
-
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 border-t border-piedra-100 pt-3">
-          <span className="cifra text-sm font-semibold text-piedra-700">
-            Palet #{palet.id}
-          </span>
-          <EstadoPaletBadge estado={palet.estado} />
-          {palet.dias_sin_movimiento >= DIAS_INMOVILIZADO && (
-            <Badge variante="neutral">Quieto {palet.dias_sin_movimiento} días</Badge>
-          )}
-        </div>
-      </Card>
+      <p className="cifra -mt-1 text-sm text-piedra-500">
+        Salieron {consumido} {unidad} desde que ingresó.
+      </p>
 
       <Card>
         <dl>
@@ -216,7 +219,11 @@ export function DetallePaletGerencia() {
           // Sin `onCorregir`: el historial no ofrece ninguna acción al jefe.
           <HistorialMovimientos
             movimientos={movimientos}
-            alta={{ fecha: palet.fecha_ingreso, cantidad: palet.cantidad_inicial }}
+            alta={{
+              fecha: palet.fecha_ingreso,
+              cantidad: palet.cantidad_inicial,
+              transportista: palet.transportista_nombre,
+            }}
             usuarioActualId={usuario?.id ?? null}
             unidad={unidad}
           />

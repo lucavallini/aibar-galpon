@@ -113,6 +113,7 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
   // `useWatch` y no `watch()`: el segundo devuelve una función que el React
   // Compiler no puede memoizar.
   const tipoElegido = useWatch({ control, name: 'tipo' })
+  const ayudaDelTipo = TIPOS.find((tipo) => tipo.valor === tipoElegido)?.ayuda
 
   const cantidadNumerica = aConfirmar?.cantidad ?? 0
 
@@ -205,37 +206,41 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
             Disponible: <strong>{disponible} {unidad}</strong>
           </p>
 
+          {/* Tres botones grandes en vez de una lista de radios: se elige con
+              el pulgar y con guantes, y el círculo del radio era el único
+              blanco de 20 px de todo el formulario. Los radios siguen ahí
+              —ocultos con `sr-only`— para no perder ni el teclado ni el
+              lector de pantalla. */}
           <fieldset>
-            <legend className="mb-2 text-base font-medium text-piedra-800">
-              Tipo de movimiento
-            </legend>
+            <legend className="rotulo mb-2">Tipo de movimiento</legend>
 
-            <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {TIPOS.map((tipo) => (
                 <label
                   key={tipo.valor}
                   className={cx(
-                    'flex min-h-toque cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors',
-                    'has-[:checked]:border-marca-600 has-[:checked]:bg-marca-50',
-                    'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-marca-600',
-                    'border-piedra-300',
+                    'flex min-h-toque cursor-pointer items-center justify-center rounded-lg border-2 px-2 text-center text-base font-semibold transition-colors',
+                    'border-piedra-300 text-piedra-700',
+                    'has-[:checked]:border-marca-700 has-[:checked]:bg-marca-50 has-[:checked]:text-marca-800',
+                    'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-marca-600 has-[:focus-visible]:ring-offset-2',
                   )}
                 >
                   <input
                     type="radio"
                     value={tipo.valor}
                     {...register('tipo')}
-                    className="mt-1 size-5 accent-marca-700"
+                    className="sr-only"
                   />
-                  <span>
-                    <span className="block text-base font-medium text-piedra-900">
-                      {tipo.etiqueta}
-                    </span>
-                    <span className="block text-sm text-piedra-500">{tipo.ayuda}</span>
-                  </span>
+                  {tipo.etiqueta}
                 </label>
               ))}
             </div>
+
+            {/* La ayuda del tipo elegido, en un solo renglón: con las tres a la
+                vista el bloque medía media pantalla. */}
+            {ayudaDelTipo !== undefined && (
+              <p className="mt-2 text-sm text-piedra-500">{ayudaDelTipo}</p>
+            )}
 
             {errors.tipo !== undefined && (
               <p className="mt-1 text-sm font-medium text-red-700">{errors.tipo.message}</p>
@@ -310,32 +315,51 @@ export function RegistrarMovimiento({ palet, abierto, onCerrar }: Props) {
       {/* ---------- Paso 2: resumen antes de tocar el stock ---------- */}
       {paso === 'confirmacion' && (
         <div className="flex flex-col gap-4">
-          <div className="rounded-lg border border-piedra-200 bg-piedra-50 p-4">
-            <p className="text-base text-piedra-600">Vas a registrar</p>
-            <p className="mt-1 text-2xl font-bold text-piedra-900">
-              {etiquetaTipo} de {cantidadNumerica} {unidad}
-            </p>
-            <p className="mt-2 text-base text-piedra-600">
-              Palet #{palet.id} · {palet.producto.nombre}
-              <br />
-              Lote {palet.lote}
-              {/* Va en el resumen porque es parte de lo que se está por dejar
-                  asentado, y corregirlo después no se puede. */}
-              {aConfirmar?.transportistaNombre !== null &&
-                aConfirmar?.transportistaNombre !== undefined && (
-                  <>
-                    <br />
-                    Se la lleva {aConfirmar.transportistaNombre}
-                  </>
-                )}
-            </p>
-          </div>
+          {/* El resumen como filas de rótulo y valor, con las dos cifras que
+              importan enfrentadas: cuánto se va y cuánto queda. Un cero de más
+              en la cantidad hay que ir a corregirlo después, con la ventana de
+              30 minutos encima, así que acá tiene que saltar a la vista. */}
+          <div className="rounded-lg border border-piedra-200 bg-piedra-50 px-4">
+            <div className="flex items-baseline justify-between gap-4 border-b border-piedra-200 py-3">
+              <span className="rotulo">Palet</span>
+              <span className="cifra text-right text-base font-semibold text-piedra-900">
+                #{palet.id} · {palet.producto.nombre}
+              </span>
+            </div>
 
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-marca-200 bg-marca-50 p-4">
-            <span className="text-base text-marca-900">Van a quedar</span>
-            <span className="text-3xl font-bold text-marca-900">
-              {restante} {unidad}
-            </span>
+            <div className="flex items-baseline justify-between gap-4 border-b border-piedra-200 py-3">
+              <span className="rotulo">{etiquetaTipo}</span>
+              <span className="cifra text-3xl leading-none font-bold text-red-700">
+                {cantidadNumerica} {unidad}
+              </span>
+            </div>
+
+            <div className="flex items-baseline justify-between gap-4 py-3 last:border-b-0">
+              <span className="rotulo">Queda</span>
+              <span className="cifra text-3xl leading-none font-bold text-marca-700">
+                {restante} {unidad}
+              </span>
+            </div>
+
+            {/* Va en el resumen porque es parte de lo que se está por dejar
+                asentado, y corregirlo después no se puede. En un ajuste no
+                aparece: una rotura no tuvo ningún camión. */}
+            {aConfirmar?.transportistaNombre !== null &&
+              aConfirmar?.transportistaNombre !== undefined && (
+                <div className="flex items-baseline justify-between gap-4 border-t border-piedra-200 py-3">
+                  <span className="rotulo">Se lo lleva</span>
+                  <span className="text-right text-base font-semibold text-piedra-900">
+                    {aConfirmar.transportistaNombre}
+                  </span>
+                </div>
+              )}
+
+            <div className="flex items-baseline justify-between gap-4 border-t border-piedra-200 py-3">
+              <span className="rotulo">Lote</span>
+              <span className="cifra text-right text-base font-medium text-piedra-700">
+                {palet.lote}
+              </span>
+            </div>
           </div>
 
           <p className="text-sm text-piedra-500">

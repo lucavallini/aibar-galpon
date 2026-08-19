@@ -11,6 +11,8 @@ import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EstadoPaletBadge } from '@/components/EstadoPaletBadge'
+import { BarraDeConsumo } from '@/components/ui/BarraDeConsumo'
+import { porcentajeRestante } from '@/lib/consumo'
 import { cx } from '@/lib/cx'
 import { rutaPalet } from '@/rutas'
 import type { Categoria, Galpon, PaletConProducto } from '@/types'
@@ -35,6 +37,8 @@ interface PropsFila {
 }
 
 function FilaDePalet({ palet, onAbrir }: PropsFila) {
+  const restante = porcentajeRestante(palet.cantidad_disponible, palet.cantidad_inicial)
+
   return (
     <Card comoBoton onClick={onAbrir}>
       <div className="flex items-start justify-between gap-3">
@@ -53,11 +57,17 @@ function FilaDePalet({ palet, onAbrir }: PropsFila) {
           </p>
         </div>
 
-        <div className="shrink-0 text-right">
+        <div className="w-20 shrink-0 text-right">
           <p className="cifra text-xl leading-none font-bold text-piedra-900">
             {palet.cantidad_disponible}
           </p>
           <p className="mt-0.5 text-xs text-piedra-500">{palet.unidad_medida}</p>
+
+          {/* Igual que en el panel del jefe: en una lista, la proporción se lee
+              más rápido que dos cifras que hay que dividir mentalmente. */}
+          {restante !== null && (
+            <BarraDeConsumo porcentaje={restante} className="mt-2" />
+          )}
         </div>
       </div>
 

@@ -13,19 +13,29 @@
   /* ---------------------------------------------------------------
    * Marca
    * ---------------------------------------------------------------
-   * Verde profundo, desaturado hacia el oliva. El verde brillante es
-   * el reflejo automático de cualquier app del agro; este es el de
-   * un bidón de herbicida y aguanta mejor el texto blanco encima.
+   * Verde corporativo de AIBAR. La escala se deriva de él manteniendo
+   * el croma y variando la luminosidad, así que los nombres de token
+   * no cambian y ninguna clase de Tailwind tuvo que tocarse.
+   *
+   * ⚠️ El corporativo da 5,3:1 sobre blanco, no los 7,4:1 que daba el
+   * oliva anterior. De ahí la regla que sostiene el resto del sistema:
+   *
+   *   - `marca-700` para superficies llenas y cifras grandes, donde el
+   *     tamaño compensa el contraste (botones, la cifra de disponible).
+   *   - `marca-800` para texto chico y enlaces, que vuelve a 7,4:1.
+   *
+   * Escribir texto de 14 px en `marca-700` sobre blanco es el error que
+   * esta escala invita a cometer.
    */
-  --color-marca-50: #f2f6f0;
-  --color-marca-100: #e0eadc;
-  --color-marca-200: #c2d5ba;
-  --color-marca-300: #9bb98e;
-  --color-marca-600: #4a6b3d;
-  --color-marca-700: #3b5730; /* Principal. 7.4:1 sobre blanco. */
-  --color-marca-800: #2d4325;
-  --color-marca-900: #1f2f19;
-  --color-marca-950: #131d0f;
+  --color-marca-50: #eff7f4;
+  --color-marca-100: #d5ebe4;
+  --color-marca-200: #a9d6c9;
+  --color-marca-300: #6fbaa7;
+  --color-marca-600: #00937a;
+  --color-marca-700: #007a63; /* Corporativo. 5.3:1 sobre blanco. */
+  --color-marca-800: #00614e; /* Texto chico y enlaces. 7.4:1. */
+  --color-marca-900: #05463a;
+  --color-marca-950: #062c25;
 
   /* ---------------------------------------------------------------
    * Neutros

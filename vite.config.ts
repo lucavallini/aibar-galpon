@@ -14,7 +14,12 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      devOptions: { enabled: true },
+      // Apagado en desarrollo a propósito. Con el service worker activo en
+      // `npm run dev`, el shell queda precacheado y un cambio de estilos no se
+      // ve hasta cerrar todas las pestañas del origen: el mecanismo que hace
+      // que la app abra sin señal en el galpón tapa los cambios mientras se
+      // trabaja. En el build de producción sigue intacto, que es donde importa.
+      devOptions: { enabled: false },
       workbox: {
         // El shell entero queda precacheado: la app abre sin señal.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
@@ -44,7 +49,7 @@ export default defineConfig({
         orientation: 'portrait',
         start_url: '/',
         background_color: '#ffffff',
-        theme_color: '#166534',
+        theme_color: '#007a63',
         icons: [
           {
             src: '/icono-192.png',

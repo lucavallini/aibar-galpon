@@ -205,6 +205,26 @@ quedaba margen para hacer nada. Ese mismo umbral gobierna el cartel ámbar de ca
 eso el plazo se muestra con `formatearAnticipacion()`: pasado el par de meses cuenta en meses,
 porque «Vence en 174 d» obliga a hacer la cuenta mental.
 
+**Sobre el faro**: la pantalla de un palet abre con `FaroPalet` —bloque de color
+lleno, a sangre, con la cifra de disponible como encabezado— y no con una tarjeta
+centrada. Se mira con el palet delante, a veces a un brazo de distancia y con sol de
+frente: en ese segundo hace falta un solo dato de toda la pantalla. Lo usan **el
+operario y la gerencia con el mismo componente**, a propósito: cuando el jefe y el
+depósito hablan por teléfono sobre un palet, los dos tienen que estar mirando el mismo
+número en el mismo lugar. Cuando el palet quedó vacío o está dado de baja va `apagado`,
+en piedra en lugar de marca: el verde lleno significa «acá hay mercadería» y usarlo para
+un palet vacío diría lo contrario de lo que pasa.
+
+El **porcentaje y la barra de consumo** (`porcentajeRestante()` en `lib/consumo.ts` y
+`BarraDeConsumo`) acompañan a la cifra, nunca la reemplazan: «62 %» no sirve para cargar
+un camión, pero dice al instante si el palet está entero o casi vacío, que es lo que no
+se deduce de «1.240» sin saber con cuánto entró. Por eso también van en las filas del
+buscador y del panel, donde comparar dos cifras por renglón es más lento que mirar una
+barra. El cálculo **nunca redondea a 0 ni a 100 si no llegó**: «0 %» con mercadería
+adentro, o «100 %» con algo ya despachado, es mentira. Y la barra **no cambia de color
+según lo que queda** —un palet por la mitad es lo más normal del depósito—: pintarla de
+ámbar le robaría significado a los colores que sí avisan algo, el vencimiento y la baja.
+
 **Sobre los movimientos de stock**: se registran con `registrarMovimiento()`, que llama a la
 RPC. Nunca por `INSERT` en `movimiento` ni `UPDATE` sobre `palet` — está bloqueado por
 permisos y triggers, y además los tipos lo vuelven un error de compilación. Los mensajes que

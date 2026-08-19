@@ -16,11 +16,13 @@ import {
   type PreguntaDeNegocio,
 } from '@/lib/queries/gerencia'
 import { formatearAnticipacion } from '@/lib/vencimiento'
+import { porcentajeRestante } from '@/lib/consumo'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { BarraDeConsumo } from '@/components/ui/BarraDeConsumo'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -154,6 +156,7 @@ function FilaPalet({ palet, onAbrir }: { palet: PaletGerencia; onAbrir: () => vo
     palet.dias_para_vencer !== null &&
     palet.dias_para_vencer >= 0 &&
     palet.dias_para_vencer <= DIAS_VENCIMIENTO_PROXIMO
+  const restante = porcentajeRestante(palet.cantidad_disponible, palet.cantidad_inicial)
 
   return (
     <Card comoBoton onClick={onAbrir}>
@@ -213,13 +216,25 @@ function FilaPalet({ palet, onAbrir }: { palet: PaletGerencia; onAbrir: () => vo
           )}
         </div>
 
-        <div className="shrink-0 text-right">
+        <div className="w-24 shrink-0 text-right">
           <p className="cifra text-2xl leading-none font-bold text-piedra-900">
             {palet.cantidad_disponible}
           </p>
           <p className="cifra mt-0.5 text-xs text-piedra-500">
             de {palet.cantidad_inicial} {palet.unidad_medida}
           </p>
+
+          {/* Cuánto queda, en proporción: recorriendo una lista larga es lo que
+              distingue de un vistazo un palet entero de uno casi vacío, que en
+              números crudos exige comparar dos cifras por fila. */}
+          {restante !== null && (
+            <>
+              <BarraDeConsumo porcentaje={restante} className="mt-2" />
+              <p className="cifra mt-1 text-xs font-semibold text-piedra-600">
+                {restante} %
+              </p>
+            </>
+          )}
         </div>
       </div>
     </Card>
@@ -302,7 +317,7 @@ export function PanelGerencia() {
 
       {/* ---------- Stock consolidado ---------- */}
       <section>
-        <h2 className="rotulo mb-2">Stock por producto</h2>
+        <h2 className="rotulo mb-2">Stock por producto y unidad</h2>
 
         <Card sinPadding>
           <div className="flex flex-wrap gap-6 border-b border-piedra-100 p-4">
@@ -357,9 +372,9 @@ export function PanelGerencia() {
                               : 'semilla'}
                           </span>
                         </td>
-                        <td className="cifra p-3 text-right font-semibold text-piedra-900">
+                        <td className="cifra p-3 text-right font-bold text-marca-700">
                           {fila.total_disponible}{' '}
-                          <span className="font-normal text-piedra-500">
+                          <span className="font-medium text-piedra-500">
                             {fila.unidad_medida}
                           </span>
                         </td>
@@ -398,7 +413,9 @@ export function PanelGerencia() {
           )}
         </div>
 
-        <p className="-mt-2 text-sm text-piedra-500">{PREGUNTAS[pregunta].explica}</p>
+        <p className="-mt-2 border-l-3 border-marca-700 pl-3 text-sm text-piedra-600">
+          {PREGUNTAS[pregunta].explica}
+        </p>
 
         <Card className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
@@ -529,27 +546,31 @@ export function PanelGerencia() {
             </Select>
           </div>
 
-          <div className="sm:col-span-2 lg:col-span-4">
-            <p className="mb-1 text-sm font-medium text-piedra-700">Galpón</p>
-            <div className="flex gap-2">
-              <Button
-                variante={galpon === undefined ? 'primario' : 'secundario'}
-                onClick={() => setGalpon(undefined)}
-                className="flex-1 sm:flex-none"
-              >
-                Todos
-              </Button>
+          <div>
+            <label
+              htmlFor="filtro-galpon"
+              className="mb-1 block text-sm font-medium text-piedra-700"
+            >
+              Galpón
+            </label>
+            <Select
+              id="filtro-galpon"
+              value={galpon === undefined ? '' : String(galpon)}
+              onChange={(evento) =>
+                setGalpon(
+                  evento.target.value === ''
+                    ? undefined
+                    : (Number(evento.target.value) as Galpon),
+                )
+              }
+            >
+              <option value="">Todos</option>
               {GALPONES.map((numero) => (
-                <Button
-                  key={numero}
-                  variante={galpon === numero ? 'primario' : 'secundario'}
-                  onClick={() => setGalpon(numero)}
-                  className="flex-1 sm:flex-none"
-                >
+                <option key={numero} value={String(numero)}>
                   Galpón {numero}
-                </Button>
+                </option>
               ))}
-            </div>
+            </Select>
           </div>
         </Card>
 
